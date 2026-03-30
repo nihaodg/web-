@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CTF Web 漏洞可视化学习平台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    .animate-float {
+      animation: float 3s ease-in-out infinite;
+    }
+    .card-hover:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-900 text-gray-200 font-mono selection:bg-blue-500/30">
+  
+  <!-- Header -->
+  <header class="border-b border-gray-700 bg-gray-950/50 backdrop-blur">
+    <div class="max-w-7xl mx-auto px-6 py-8">
+      <div class="text-center animate-fade-in">
+        <h1 class="text-4xl font-bold text-white mb-4 flex items-center justify-center gap-3">
+          <i data-lucide="bug" class="w-10 h-10 text-red-400"></i>
+          CTF Web 漏洞可视化学习平台
+        </h1>
+        <p class="text-gray-400 text-lg max-w-2xl mx-auto">
+          通过交互式可视化，深入理解Web漏洞的原理与利用技术
+        </p>
+        <div class="flex justify-center gap-4 mt-6 flex-wrap">
+          <span class="px-3 py-1 bg-blue-900/30 text-blue-400 rounded-full text-sm border border-blue-800">PHP反序列化</span>
+          <span class="px-3 py-1 bg-red-900/30 text-red-400 rounded-full text-sm border border-red-800">SSTI</span>
+          <span class="px-3 py-1 bg-yellow-900/30 text-yellow-400 rounded-full text-sm border border-yellow-800">SQL注入</span>
+          <span class="px-3 py-1 bg-green-900/30 text-green-400 rounded-full text-sm border border-green-800">XSS</span>
+          <span class="px-3 py-1 bg-purple-900/30 text-purple-400 rounded-full text-sm border border-purple-800">SSRF</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-6 py-12">
+
+    <!-- PHP反序列化 -->
+    <div class="mb-12">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="database" class="w-6 h-6 text-orange-400"></i>
+        PHP 反序列化漏洞
+        <span class="text-sm font-normal text-gray-400">理解序列化与反序列化原理</span>
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- 序列化基础 -->
+        <a href="pages/php-unserialize-basics.html" class="block animate-fade-in" style="animation-delay: 0.1s;">
+          <div class="bg-gray-800 rounded-xl border border-gray-700 p-5 card-hover transition-all duration-300 h-full">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 bg-orange-900/30 rounded-lg flex items-center justify-center">
+                <i data-lucide="box" class="w-5 h-5 text-orange-400"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-white">序列化基础</h3>
+                <span class="text-xs text-orange-400">serialize/unserialize</span>
+              </div>
+            </div>
+            <p class="text-gray-400 text-sm">
+              理解序列化与反序列化的定义、应用场景及PHP中的相关函数。
+            </p>
+            <div class="flex items-center gap-2 text-blue-400 text-sm mt-3">
+              <span>开始学习</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </div>
+          </div>
+        </a>
+
+        <!-- 魔术方法 -->
+        <a href="pages/magic-methods.html" class="block animate-fade-in" style="animation-delay: 0.2s;">
+          <div class="bg-gray-800 rounded-xl border border-gray-700 p-5 card-hover transition-all duration-300 h-full">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 bg-purple-900/30 rounded-lg flex items-center justify-center">
+                <i data-lucide="sparkles" class="w-5 h-5 text-purple-400"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-white">PHP魔术方法</h3>
+                <span class="text-xs text-purple-400">Magic Methods</span>
+              </div>
+            </div>
+            <p class="text-gray-400 text-sm">
+              掌握PHP中以__开头的魔术方法，理解各方法的触发条件与核心作用。
+            </p>
+            <div class="flex items-center gap-2 text-blue-400 text-sm mt-3">
+              <span>开始学习</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </div>
+          </div>
+        </a>
+
+        <!-- POP链构造 -->
+        <a href="pages/pop-chain.html" class="block animate-fade-in" style="animation-delay: 0.3s;">
+          <div class="bg-gray-800 rounded-xl border border-gray-700 p-5 card-hover transition-all duration-300 h-full">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 bg-green-900/30 rounded-lg flex items-center justify-center">
+                <i data-lucide="git-branch" class="w-5 h-5 text-green-400"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-white">POP链构造</h3>
+                <span class="text-xs text-green-400">Property-Oriented Programming</span>
+              </div>
+            </div>
+            <p class="text-gray-400 text-sm">
+              学习通过反向回溯法构造POP链，最终执行危险操作的攻击链。
+            </p>
+            <div class="flex items-center gap-2 text-blue-400 text-sm mt-3">
+              <span>开始学习</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </div>
+          </div>
+        </a>
+
+        <!-- Phar反序列化 -->
+        <a href="pages/phar-unserialize.html" class="block animate-fade-in" style="animation-delay: 0.4s;">
+          <div class="bg-gray-800 rounded-xl border border-gray-700 p-5 card-hover transition-all duration-300 h-full">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 bg-red-900/30 rounded-lg flex items-center justify-center">
+                <i data-lucide="archive" class="w-5 h-5 text-red-400"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-white">Phar反序列化</h3>
+                <span class="text-xs text-red-400">Phar Deserialization</span>
+              </div>
+            </div>
+            <p class="text-gray-400 text-sm">
+              理解Phar文件格式、漏洞原理及利用技巧，包括伪装图片绕过检测。
+            </p>
+            <div class="flex items-center gap-2 text-blue-400 text-sm mt-3">
+              <span>开始学习</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </div>
+          </div>
+        </a>
+
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+        
+        <!-- 原生类利用 -->
+        <a href="pages/native-classes.html" class="block animate-fade-in" style="animation-delay: 0.5s;">
+          <div class="bg-gray-800 rounded-xl border border-gray-700 p-5 card-hover transition-all duration-300 h-full">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 bg-cyan-900/30 rounded-lg flex items-center justify-center">
+                <i data-lucide="cpu" class="w-5 h-5 text-cyan-400"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-white">PHP原生类利用</h3>
+                <span class="text-xs text-cyan-400">Error/Exception/SoapClient</span>
+              </div>
+            </div>
+            <p class="text-gray-400 text-sm">
+              利用PHP内置类触发XSS、SSRF、CRLF注入等漏洞。
+            </p>
+            <div class="flex items-center gap-2 text-blue-400 text-sm mt-3">
+              <span>开始学习</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </div>
+          </div>
+        </a>
+
+        <!-- 例题1 -->
+        <a href="pages/example1.html" class="block animate-fade-in" style="animation-delay: 0.6s;">
+          <div class="bg-gray-800 rounded-xl border border-gray-700 p-5 card-hover transition-all duration-300 h-full">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 bg-yellow-900/30 rounded-lg flex items-center justify-center">
+                <i data-lucide="file-code" class="w-5 h-5 text-yellow-400"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-white">例题1</h3>
+                <span class="text-xs text-yellow-400">User类反序列化</span>
+              </div>
+            </div>
+            <p class="text-gray-400 text-sm">
+              User类的__destruct()与__toString()联合利用，触发system执行命令。
+            </p>
+            <div class="flex items-center gap-2 text-blue-400 text-sm mt-3">
+              <span>开始学习</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </div>
+          </div>
+        </a>
+
+        <!-- 例题2 -->
+        <a href="pages/example2.html" class="block animate-fade-in" style="animation-delay: 0.7s;">
+          <div class="bg-gray-800 rounded-xl border border-gray-700 p-5 card-hover transition-all duration-300 h-full">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-10 h-10 bg-pink-900/30 rounded-lg flex items-center justify-center">
+                <i data-lucide="file-code" class="w-5 h-5 text-pink-400"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-white">例题2</h3>
+                <span class="text-xs text-pink-400">A/B类联合构造</span>
+              </div>
+            </div>
+            <p class="text-gray-400 text-sm">
+              A/B类联合构造POP链，触发file_put_contents()写入木马文件。
+            </p>
+            <div class="flex items-center gap-2 text-blue-400 text-sm mt-3">
+              <span>开始学习</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </div>
+          </div>
+        </a>
+
+      </div>
+    </div>
+
+    <!-- 学习路径 -->
+    <div class="mt-16">
+      <h2 class="text-2xl font-bold text-white mb-8 text-center flex items-center justify-center gap-3">
+        <i data-lucide="map" class="w-6 h-6 text-blue-400"></i>
+        推荐学习路径
+      </h2>
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-8">
+        <div class="flex flex-wrap items-center justify-center gap-4">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-orange-900/50 rounded-full flex items-center justify-center text-white font-bold">0</div>
+            <span class="text-gray-300">序列化基础</span>
+          </div>
+          <i data-lucide="arrow-right" class="w-5 h-5 text-gray-600"></i>
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-purple-900/50 rounded-full flex items-center justify-center text-white font-bold">1</div>
+            <span class="text-gray-300">魔术方法</span>
+          </div>
+          <i data-lucide="arrow-right" class="w-5 h-5 text-gray-600"></i>
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-green-900/50 rounded-full flex items-center justify-center text-white font-bold">2</div>
+            <span class="text-gray-300">POP链构造</span>
+          </div>
+          <i data-lucide="arrow-right" class="w-5 h-5 text-gray-600"></i>
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-red-900/50 rounded-full flex items-center justify-center text-white font-bold">3</div>
+            <span class="text-gray-300">Phar反序列化</span>
+          </div>
+          <i data-lucide="arrow-right" class="w-5 h-5 text-gray-600"></i>
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-cyan-900/50 rounded-full flex items-center justify-center text-white font-bold">4</div>
+            <span class="text-gray-300">原生类利用</span>
+          </div>
+          <i data-lucide="arrow-right" class="w-5 h-5 text-gray-600"></i>
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-yellow-900/50 rounded-full flex items-center justify-center text-white font-bold">5</div>
+            <span class="text-gray-300">实战例题</span>
+          </div>
+        </div>
+        <div class="mt-6 text-center">
+          <p class="text-gray-400 text-sm">
+            <span class="text-blue-400">建议：</span>从序列化基础开始，理解基本概念后再学习魔术方法和POP链构造
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-16 text-center text-gray-500 text-sm">
+      <p>CTF Web 漏洞可视化学习平台 - 让PHP反序列化学习更直观</p>
+      <p class="mt-2">基于 Tailwind CSS + Lucide Icons 构建</p>
+    </footer>
+  </main>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

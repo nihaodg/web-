@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PHP魔术方法 - PHP反序列化学习</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    pre {
+      background: #1a1a2e;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 14px;
+    }
+    code {
+      font-family: 'Courier New', monospace;
+    }
+    .code-block {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+    }
+    .output-block {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+    }
+    .method-card {
+      transition: all 0.3s ease;
+    }
+    .method-card:hover {
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-900 text-gray-200 font-mono">
+  
+  <!-- Header -->
+  <header class="border-b border-gray-700 bg-gray-950/50 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4">
+      <div class="flex items-center gap-4">
+        <a href="../index.html" class="text-blue-400 hover:text-blue-300 flex items-center gap-2">
+          <i data-lucide="arrow-left" class="w-5 h-5"></i>
+          <span>返回首页</span>
+        </a>
+        <div class="flex-1">
+          <h1 class="text-xl font-bold text-white">PHP 魔术方法详解</h1>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    
+    <!-- 概述 -->
+    <section class="mb-12 animate-fade-in">
+      <div class="bg-purple-900/20 border border-purple-800 rounded-xl p-6 mb-8">
+        <h2 class="text-xl font-bold text-purple-300 mb-3 flex items-center gap-2">
+          <i data-lucide="sparkles" class="w-5 h-5"></i>
+          什么是魔术方法？
+        </h2>
+        <p class="text-gray-300">
+          PHP魔术方法是以<strong class="text-white">__</strong>（双下划线）开头的特殊方法，在特定场景下<strong class="text-yellow-400">自动触发</strong>。
+          它们是反序列化漏洞利用的核心，我们需要理解每个方法的<strong class="text-green-400">触发条件</strong>和<strong class="text-red-400">可利用的操作</strong>。
+        </p>
+      </div>
+    </section>
+
+    <!-- 构造与析构 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.1s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="box" class="w-6 h-6 text-blue-400"></i>
+        构造与析构方法
+      </h2>
+
+      <!-- __construct -->
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 mb-6 method-card">
+        <div class="flex items-center gap-3 mb-4">
+          <h3 class="text-xl font-bold text-green-400">__construct()</h3>
+          <span class="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs">对象创建时触发</span>
+        </div>
+        <p class="text-gray-400 mb-4">对象被创建时自动调用，常用于初始化对象属性。</p>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="code" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">PHP代码</span>
+            </div>
+            <div class="code-block">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">User</span> {
+    <span class="text keyword">public</span> $<span class="text variable">name</span>;
+    <span class="text keyword">public</span> $<span class="text variable">age</span>;
+    
+    <span class="text keyword">public function</span> <span class="text function">__construct</span>(<span class="text variable">$name</span>, <span class="text variable">$age</span>) {
+        <span class="text variable">$this</span>->name = <span class="text variable">$name</span>;
+        <span class="text variable">$this</span>->age = <span class="text variable">$age</span>;
+        <span class="text function">echo</span> <span class="text string">"构造函数被调用: "</span> . <span class="text variable">$this</span>->name . <span class="text string">"\n"</span>;
+    }
+}
+
+<span class="text variable">$user</span> = <span class="text keyword">new</span> <span class="text class-name">User</span>(<span class="text string">"Alice"</span>, <span class="text number">20</span>);
+</code></pre>
+            </div>
+          </div>
+          
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="terminal" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">运行结果</span>
+            </div>
+            <div class="output-block">
+<pre><code>构造函数被调用: Alice</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- __destruct -->
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 mb-6 method-card">
+        <div class="flex items-center gap-3 mb-4">
+          <h3 class="text-xl font-bold text-red-400">__destruct()</h3>
+          <span class="px-2 py-1 bg-red-900/30 text-red-400 rounded text-xs">对象销毁时触发</span>
+        </div>
+        <p class="text-gray-400 mb-4">对象被销毁时自动调用（脚本结束、unset()、或引用计数归零）。<strong class="text-yellow-400">反序列化漏洞中最常用的触发点！</strong></p>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="code" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">PHP代码</span>
+            </div>
+            <div class="code-block">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">Demo</span> {
+    <span class="text keyword">public</span> $<span class="text variable">data</span>;
+    
+    <span class="text keyword">public function</span> <span class="text function">__destruct</span>() {
+        <span class="text function">echo</span> <span class="text string">"对象被销毁，最后操作: "</span> . <span class="text variable">$this</span>->data . <span class="text string">"\n"</span>;
+    }
+}
+
+<span class="text comment">// 当脚本结束时，未使用的对象会被销毁</span>
+<span class="text variable">$demo</span> = <span class="text keyword">new</span> <span class="text class-name">Demo</span>();
+<span class="text variable">$demo</span>->data = <span class="text string">"cleanup"</span>;
+<span class="text comment">// 脚本结束，对象销毁</span>
+</code></pre>
+            </div>
+          </div>
+          
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="terminal" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">运行结果</span>
+            </div>
+            <div class="output-block">
+<pre><code>对象被销毁，最后操作: cleanup</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 属性访问 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.2s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="key" class="w-6 h-6 text-yellow-400"></i>
+        属性访问方法
+      </h2>
+
+      <!-- __get -->
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 mb-6 method-card">
+        <div class="flex items-center gap-3 mb-4">
+          <h3 class="text-xl font-bold text-yellow-400">__get($name)</h3>
+          <span class="px-2 py-1 bg-yellow-900/30 text-yellow-400 rounded text-xs">读取不可访问属性时触发</span>
+        </div>
+        <p class="text-gray-400 mb-4">当读取一个<strong class="text-white">不存在的属性</strong>或<strong class="text-white">protected/private属性</strong>时自动调用。可用于日志记录或动态计算属性值。</p>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="code" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">PHP代码</span>
+            </div>
+            <div class="code-block">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">User</span> {
+    <span class="text keyword">private</span> $<span class="text variable">$secret</span> = <span class="text string">"password123"</span>;
+    
+    <span class="text comment">// 当访问不存在或不可访问的属性时调用</span>
+    <span class="text keyword">public function</span> <span class="text function">__get</span>(<span class="text variable">$name</span>) {
+        <span class="text function">echo</span> <span class="text string">"尝试获取属性: </span><span class="text variable">$name</span><span class="text string">\n"</span>;
+        <span class="text keyword">return</span> <span class="text string">"你访问了"</span> . <span class="text variable">$name</span>;
+    }
+}
+
+<span class="text variable">$user</span> = <span class="text keyword">new</span> <span class="text class-name">User</span>();
+<span class="text function">echo</span> <span class="text variable">$user</span>->nonExistent . <span class="text string">"\n"</span>;
+<span class="text function">echo</span> <span class="text variable">$user</span>->name;
+</code></pre>
+            </div>
+          </div>
+          
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="terminal" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">运行结果</span>
+            </div>
+            <div class="output-block">
+<pre><code>尝试获取属性: nonExistent
+你访问了nonExistent
+尝试获取属性: name
+你访问了name</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- __set -->
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 mb-6 method-card">
+        <div class="flex items-center gap-3 mb-4">
+          <h3 class="text-xl font-bold text-cyan-400">__set($name, $value)</h3>
+          <span class="px-2 py-1 bg-cyan-900/30 text-cyan-400 rounded text-xs">修改不可访问属性时触发</span>
+        </div>
+        <p class="text-gray-400 mb-4">当对<strong class="text-white">不存在的属性</strong>或<strong class="text-white">protected/private属性</strong>进行赋值时自动调用。</p>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="code" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">PHP代码</span>
+            </div>
+            <div class="code-block">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">User</span> {
+    <span class="text keyword">private</span> $<span class="text variable">$data</span> = [];
+    
+    <span class="text keyword">public function</span> <span class="text function">__set</span>(<span class="text variable">$name</span>, <span class="text variable">$value</span>) {
+        <span class="text function">echo</span> <span class="text string">"设置属性 </span><span class="text variable">$name</span><span class="text string"> = </span><span class="text variable">$value</span><span class="text string">\n"</span>;
+        <span class="text variable">$this</span>->$data[<span class="text variable">$name</span>] = <span class="text variable">$value</span>;
+    }
+}
+
+<span class="text variable">$user</span> = <span class="text class-name">User</span>();
+<span class="text variable">$user</span>->email = <span class="text string">"alice@example.com"</span>;
+<span class="text variable">$user</span>->role = <span class="text string">"admin"</span>;
+</code></pre>
+            </div>
+          </div>
+          
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="terminal" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">运行结果</span>
+            </div>
+            <div class="output-block">
+<pre><code>设置属性 email = alice@example.com
+设置属性 role = admin</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- __isset -->
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 mb-6 method-card">
+        <div class="flex items-center gap-3 mb-4">
+          <h3 class="text-xl font-bold text-pink-400">__isset($name)</h3>
+          <span class="px-2 py-1 bg-pink-900/30 text-pink-400 rounded text-xs">使用isset()/empty()时触发</span>
+        </div>
+        <p class="text-gray-400 mb-4">当对<strong class="text-white">不可访问的属性</strong>使用<code class="text-yellow-300">isset()</code>或<code class="text-yellow-300">empty()</code>时自动调用。</p>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="code" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">PHP代码</span>
+            </div>
+            <div class="code-block">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">Config</span> {
+    <span class="text keyword">private</span> $<span class="text variable">$settings</span> = [<span class="text string">"debug"</span> => <span class="text keyword">true</span>];
+    
+    <span class="text keyword">public function</span> <span class="text function">__isset</span>(<span class="text variable">$name</span>) {
+        <span class="text function">echo</span> <span class="text string">"检查属性是否存在: </span><span class="text variable">$name</span><span class="text string">\n"</span>;
+        <span class="text keyword">return</span> <span class="text function">isset</span>(<span class="text variable">$this</span>->$settings[<span class="text variable">$name</span>]);
+    }
+}
+
+<span class="text variable">$config</span> = <span class="text keyword">new</span> <span class="text class-name">Config</span>();
+<span class="text function">var_dump</span>(<span class="text function">isset</span>(<span class="text variable">$config</span>->debug));
+<span class="text function">var_dump</span>(<span class="text function">isset</span>(<span class="text variable">$config</span>->nonexistent));
+</code></pre>
+            </div>
+          </div>
+          
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="terminal" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">运行结果</span>
+            </div>
+            <div class="output-block">
+<pre><code>检查属性是否存在: debug
+bool(true)
+检查属性是否存在: nonexistent
+bool(false)</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- __unset -->
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 mb-6 method-card">
+        <div class="flex items-center gap-3 mb-4">
+          <h3 class="text-xl font-bold text-orange-400">__unset($name)</h3>
+          <span class="px-2 py-1 bg-orange-900/30 text-orange-400 rounded text-xs">使用unset()时触发</span>
+        </div>
+        <p class="text-gray-400 mb-4">当对<strong class="text-white">不可访问的属性</strong>使用<code class="text-yellow-300">unset()</code>时自动调用。</p>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="code" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">PHP代码</span>
+            </div>
+            <div class="code-block">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">Safe</span> {
+    <span class="text keyword">private</span> $<span class="text variable">$data</span> = [<span class="text string">"secret"</span> => <span class="text string">"hidden"</span>];
+    
+    <span class="text keyword">public function</span> <span class="text function">__unset</span>(<span class="text variable">$name</span>) {
+        <span class="text function">echo</span> <span class="text string">"尝试删除属性: </span><span class="text variable">$name</span><span class="text string">\n"</span>;
+        <span class="text keyword">if</span> (<span class="text function">isset</span>(<span class="text variable">$this</span>->$data[<span class="text variable">$name</span>])) {
+            <span class="text function">unset</span>(<span class="text variable">$this</span>->$data[<span class="text variable">$name</span>]);
+            <span class="text function">echo</span> <span class="text string">"已删除\n"</span>;
+        }
+    }
+}
+
+<span class="text variable">$safe</span> = <span class="text keyword">new</span> <span class="text class-name">Safe</span>();
+<span class="text function">unset</span>(<span class="text variable">$safe</span>->secret);
+</code></pre>
+            </div>
+          </div>
+          
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="terminal" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">运行结果</span>
+            </div>
+            <div class="output-block">
+<pre><code>尝试删除属性: secret
+已删除</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 字符串操作 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.3s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="type" class="w-6 h-6 text-purple-400"></i>
+        字符串操作方法
+      </h2>
+
+      <!-- __toString -->
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 mb-6 method-card">
+        <div class="flex items-center gap-3 mb-4">
+          <h3 class="text-xl font-bold text-purple-400">__toString()</h3>
+          <span class="px-2 py-1 bg-purple-900/30 text-purple-400 rounded text-xs">对象被当作字符串时触发</span>
+          <span class="px-2 py-1 bg-red-900/30 text-red-400 rounded text-xs">漏洞利用核心</span>
+        </div>
+        <p class="text-gray-400 mb-4">
+          当对象被<strong class="text-white">当作字符串使用</strong>时触发，如：
+          <code class="text-yellow-300">echo $obj</code>、
+          <code class="text-yellow-300">print $obj</code>、
+          <code class="text-yellow-300">字符串拼接 $obj . "str"</code>、
+          <code class="text-yellow-300">字符串格式化 "%s" $obj</code>
+        </p>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="code" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">PHP代码</span>
+            </div>
+            <div class="code-block">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">Template</span> {
+    <span class="text keyword">public</span> $<span class="text variable">content</span>;
+    
+    <span class="text keyword">public function</span> <span class="text function">__toString</span>() {
+        <span class="text function">echo</span> <span class="text string">"__toString被调用\n"</span>;
+        <span class="text keyword">return</span> <span class="text string">"<h1>"</span> . <span class="text variable">$this</span>->content . <span class="text string">"</h1>"</span>;
+    }
+}
+
+<span class="text variable">$tpl</span> = <span class="text keyword">new</span> <span class="text class-name">Template</span>();
+<span class="text variable">$tpl</span>->content = <span class="text string">"Hello World"</span>;
+
+<span class="text comment">// 多种触发方式</span>
+<span class="text function">echo</span> <span class="text variable">$tpl</span>;           <span class="text comment">// 1. echo</span>
+<span class="text function">print</span> <span class="text variable">$tpl</span>;          <span class="text comment">// 2. print</span>
+<span class="text function">var_dump</span>(<span class="text string">"</span><span class="text variable">$tpl</span><span class="text string">"</span>);  <span class="text comment">// 3. 字符串中插值</span>
+</code></pre>
+            </div>
+          </div>
+          
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="terminal" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">运行结果</span>
+            </div>
+            <div class="output-block">
+<pre><code>__toString被调用
+<h1>Hello World</h1>__toString被调用
+<h1>Hello World</h1>__toString被调用
+string(15) "<h1>Hello World</h1>"</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 方法调用 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.4s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="send" class="w-6 h-6 text-green-400"></i>
+        方法调用方法
+      </h2>
+
+      <!-- __call -->
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 mb-6 method-card">
+        <div class="flex items-center gap-3 mb-4">
+          <h3 class="text-xl font-bold text-green-400">__call($name, $arguments)</h3>
+          <span class="px-2 py-1 bg-green-900/30 text-green-400 rounded text-xs">调用不可访问的实例方法时触发</span>
+        </div>
+        <p class="text-gray-400 mb-4">当调用一个<strong class="text-white">不存在的实例方法</strong>或<strong class="text-white">private/public方法</strong>时自动调用。</p>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="code" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">PHP代码</span>
+            </div>
+            <div class="code-block">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">API</span> {
+    <span class="text keyword">public function</span> <span class="text function">__call</span>(<span class="text variable">$method</span>, <span class="text variable">$args</span>) {
+        <span class="text function">echo</span> <span class="text string">"调用方法: </span><span class="text variable">$method</span><span class="text string">\n"</span>;
+        <span class="text function">echo</span> <span class="text string">"参数: "</span> . <span class="text function">implode</span>(<span class="text string">", "</span>, <span class="text variable">$args</span>) . <span class="text string">"\n"</span>;
+        <span class="text keyword">return</span> <span class="text string">"方法不存在，已拦截"</span>;
+    }
+}
+
+<span class="text variable">$api</span> = <span class="text keyword">new</span> <span class="text class-name">API</span>();
+<span class="text function">echo</span> <span class="text variable">$api</span>->getUser(<span class="text number">1</span>, <span class="text string">"admin"</span>);
+</code></pre>
+            </div>
+          </div>
+          
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="terminal" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">运行结果</span>
+            </div>
+            <div class="output-block">
+<pre><code>调用方法: getUser
+参数: 1, admin
+方法不存在，已拦截</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- __callStatic -->
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 mb-6 method-card">
+        <div class="flex items-center gap-3 mb-4">
+          <h3 class="text-xl font-bold text-cyan-400">__callStatic($name, $arguments)</h3>
+          <span class="px-2 py-1 bg-cyan-900/30 text-cyan-400 rounded text-xs">调用不可访问的静态方法时触发</span>
+        </div>
+        <p class="text-gray-400 mb-4">当调用一个<strong class="text-white">不存在的静态方法</strong>时自动调用。</p>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="code" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">PHP代码</span>
+            </div>
+            <div class="code-block">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">Math</span> {
+    <span class="text keyword">public static function</span> <span class="text function">__callStatic</span>(<span class="text variable">$name</span>, <span class="text variable">$args</span>) {
+        <span class="text function">echo</span> <span class="text string">"静态调用: </span><span class="text variable">$name</span><span class="text string">\n"</span>;
+        <span class="text keyword">return</span> <span class="text string">"已拦截并处理"</span>;
+    }
+}
+
+<span class="text function">echo</span> <span class="text class-name">Math</span>::factorial(<span class="text number">5</span>);
+</code></pre>
+            </div>
+          </div>
+          
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="terminal" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">运行结果</span>
+            </div>
+            <div class="output-block">
+<pre><code>静态调用: factorial
+已拦截并处理</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- __invoke -->
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 mb-6 method-card">
+        <div class="flex items-center gap-3 mb-4">
+          <h3 class="text-xl font-bold text-pink-400">__invoke($arguments)</h3>
+          <span class="px-2 py-1 bg-pink-900/30 text-pink-400 rounded text-xs">将对象当作方法调用时触发</span>
+        </div>
+        <p class="text-gray-400 mb-4">当使用<strong class="text-white">$obj()</strong>方式调用对象时自动调用，类似将对象作为函数使用。</p>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="code" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">PHP代码</span>
+            </div>
+            <div class="code-block">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">Multiplier</span> {
+    <span class="text keyword">public</span> $<span class="text variable">$factor</span>;
+    
+    <span class="text keyword">public function</span> <span class="text function">__construct</span>(<span class="text variable">$factor</span>) {
+        <span class="text variable">$this</span>->factor = <span class="text variable">$factor</span>;
+    }
+    
+    <span class="text keyword">public function</span> <span class="text function">__invoke</span>(<span class="text variable">$value</span>) {
+        <span class="text function">echo</span> <span class="text string">"invoke被调用，运算: "</span> . <span class="text variable">$value</span> * <span class="text variable">$this</span>->factor . <span class="text string">"\n"</span>;
+        <span class="text keyword">return</span> <span class="text variable">$value</span> * <span class="text variable">$this</span>->factor;
+    }
+}
+
+<span class="text variable">$double</span> = <span class="text keyword">new</span> <span class="text class-name">Multiplier</span>(<span class="text number">2</span>);
+<span class="text variable">$result</span> = <span class="text variable">$double</span>(<span class="text number">10</span>);
+<span class="text function">echo</span> <span class="text string">"结果: </span><span class="text variable">$result</span><span class="text string">\n"</span>;
+</code></pre>
+            </div>
+          </div>
+          
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="terminal" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">运行结果</span>
+            </div>
+            <div class="output-block">
+<pre><code>invoke被调用，运算: 20
+结果: 20</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 序列化相关 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.5s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="refresh-cw" class="w-6 h-6 text-cyan-400"></i>
+        序列化相关方法
+      </h2>
+
+      <!-- __sleep / __serialize -->
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 mb-6 method-card">
+        <div class="flex items-center gap-3 mb-4">
+          <h3 class="text-xl font-bold text-cyan-400">__sleep() / __serialize()</h3>
+          <span class="px-2 py-1 bg-cyan-900/30 text-cyan-400 rounded text-xs">执行serialize()时触发</span>
+        </div>
+        <p class="text-gray-400 mb-4">控制序列化的属性。<code class="text-yellow-300">__serialize()</code>优先级高于<code class="text-yellow-300">__sleep()</code>。</p>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="code" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">PHP代码</span>
+            </div>
+            <div class="code-block">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">User</span> {
+    <span class="text keyword">public</span> $<span class="text variable">name</span>;
+    <span class="text keyword">public</span> $<span class="text variable">password</span>;
+    <span class="text keyword">public</span> $<span class="text variable">token</span>;
+    
+    <span class="text keyword">public function</span> <span class="text function">__serialize</span>() {
+        <span class="text function">echo</span> <span class="text string">"__serialize被调用\n"</span>;
+        <span class="text keyword">return</span> [
+            <span class="text string">"name"</span> => <span class="text variable">$this</span>->name,
+            <span class="text string">"password"</span> => <span class="text variable">$this</span>->password
+        ];
+    }
+}
+
+<span class="text variable">$user</span> = <span class="text keyword">new</span> <span class="text class-name">User</span>();
+<span class="text variable">$user</span>->name = <span class="text string">"alice"</span>;
+<span class="text variable">$user</span>->password = <span class="text string">"secret"</span>;
+<span class="text variable">$user</span>->token = <span class="text string">"abc123"</span>;
+
+<span class="text variable">$data</span> = <span class="text function">serialize</span>(<span class="text variable">$user</span>);
+<span class="text function">echo</span> <span class="text variable">$data</span>;
+</code></pre>
+            </div>
+          </div>
+          
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="terminal" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">运行结果</span>
+            </div>
+            <div class="output-block">
+<pre><code>__serialize被调用
+O:4:"User":2:{s:4:"name";s:5:"alice";s:8:"password";s:5:"secret";}
+<span class="text-gray-500">// 注意：token被忽略了</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- __wakeup / __unserialize -->
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 mb-6 method-card">
+        <div class="flex items-center gap-3 mb-4">
+          <h3 class="text-xl font-bold text-orange-400">__wakeup() / __unserialize($data)</h3>
+          <span class="px-2 py-1 bg-orange-900/30 text-orange-400 rounded text-xs">执行unserialize()时触发</span>
+        </div>
+        <p class="text-gray-400 mb-4">定制反序列化的逻辑。<code class="text-yellow-300">__unserialize()</code>优先级高于<code class="text-yellow-300">__wakeup()</code>。<strong class="text-yellow-400">__wakeup()常用于绕过！</strong></p>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="code" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">PHP代码</span>
+            </div>
+            <div class="code-block">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">Connection</span> {
+    <span class="text keyword">public</span> $<span class="text variable">dbname</span>;
+    <span class="text keyword">public</span> $<span class="text variable">host</span>;
+    
+    <span class="text keyword">public function</span> <span class="text function">__wakeup</span>() {
+        <span class="text function">echo</span> <span class="text string">"__wakeup被调用\n"</span>;
+        <span class="text variable">$this</span>->host = <span class="text string">"localhost"</span>;
+    }
+}
+
+<span class="text variable">$data</span> = <span class="text string">'O:10:"Connection":2:{s:5:"dbname";s:3:"app";s:4:"host";s:9:"remote";}'</span>;
+<span class="text variable">$conn</span> = <span class="text function">unserialize</span>(<span class="text variable">$data</span>);
+<span class="text function">echo</span> <span class="text string">"Host: "</span> . <span class="text variable">$conn</span>->host . <span class="text string">"\n"</span>;
+</code></pre>
+            </div>
+          </div>
+          
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <i data-lucide="terminal" class="w-4 h-4 text-gray-400"></i>
+              <span class="text-gray-400 text-sm">运行结果</span>
+            </div>
+            <div class="output-block">
+<pre><code>__wakeup被调用
+Host: localhost
+<span class="text-gray-500">// __wakeup将host重置为localhost</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 其他方法 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.6s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="more-horizontal" class="w-6 h-6 text-gray-400"></i>
+        其他方法
+      </h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- __clone -->
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 method-card">
+          <div class="flex items-center gap-3 mb-4">
+            <h3 class="text-lg font-bold text-yellow-400">__clone()</h3>
+            <span class="px-2 py-1 bg-yellow-900/30 text-yellow-400 rounded text-xs">对象被clone时触发</span>
+          </div>
+          <p class="text-gray-400 text-sm mb-3">当使用<code class="text-yellow-300">clone</code>关键字复制对象时触发。</p>
+          <div class="code-block text-xs">
+<pre><code><span class="text keyword">class</span> <span class="text class-name">Proto</span> {
+    <span class="text keyword">public function</span> <span class="text function">__clone</span>() {
+        <span class="text function">echo</span> <span class="text string">"对象被复制\n"</span>;
+    }
+}
+$<span class="text variable">a</span> = <span class="text keyword">new</span> <span class="text class-name">Proto</span>();
+$<span class="text variable">b</span> = <span class="text function">clone</span> <span class="text variable">$a</span>;</code></pre>
+          </div>
+        </div>
+
+        <!-- __debugInfo -->
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 method-card">
+          <div class="flex items-center gap-3 mb-4">
+            <h3 class="text-lg font-bold text-gray-400">__debugInfo()</h3>
+            <span class="px-2 py-1 bg-gray-700/50 text-gray-400 rounded text-xs">var_dump/print_r时触发</span>
+          </div>
+          <p class="text-gray-400 text-sm mb-3">当使用<code class="text-yellow-300">var_dump()</code>或<code class="text-yellow-300">print_r()</code>时触发。</p>
+          <div class="code-block text-xs">
+<pre><code><span class="text keyword">class</span> <span class="text class-name">Hidden</span> {
+    <span class="text keyword">public function</span> <span class="text function">__debugInfo</span>() {
+        <span class="text keyword">return</span> [<span class="text string">"visible"</span> => <span class="text keyword">true</span>];
+    }
+}</code></pre>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 魔术方法速查表 -->
+    <section class="mb-12 animate-fade-in" style="animation-delay: 0.7s;">
+      <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+        <i data-lucide="table" class="w-6 h-6 text-red-400"></i>
+        魔术方法速查表
+      </h2>
+
+      <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-700 text-gray-400">
+              <th class="text-left py-3 px-4">方法</th>
+              <th class="text-left py-3 px-4">触发条件</th>
+              <th class="text-left py-3 px-4">核心作用</th>
+            </tr>
+          </thead>
+          <tbody class="text-gray-300">
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-green-400">__construct()</td>
+              <td class="py-3 px-4">对象被创建</td>
+              <td class="py-3 px-4">初始化属性</td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-red-400">__destruct()</td>
+              <td class="py-3 px-4">对象被销毁</td>
+              <td class="py-3 px-4">销毁前操作，<strong class="text-yellow-400">漏洞入口</strong></td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-yellow-400">__get()</td>
+              <td class="py-3 px-4">读取不可访问属性</td>
+              <td class="py-3 px-4">属性访问控制，<strong class="text-yellow-400">POP链常用</strong></td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-cyan-400">__set()</td>
+              <td class="py-3 px-4">修改不可访问属性</td>
+              <td class="py-3 px-4">属性赋值控制</td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-pink-400">__isset()</td>
+              <td class="py-3 px-4">isset()/empty()不可访问属性</td>
+              <td class="py-3 px-4">检查属性存在性</td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-orange-400">__unset()</td>
+              <td class="py-3 px-4">unset()不可访问属性</td>
+              <td class="py-3 px-4">销毁属性</td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-purple-400">__toString()</td>
+              <td class="py-3 px-4">对象当字符串使用</td>
+              <td class="py-3 px-4">字符串转换，<strong class="text-yellow-400">漏洞利用核心</strong></td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-green-400">__call()</td>
+              <td class="py-3 px-4">调用不可访问的实例方法</td>
+              <td class="py-3 px-4">方法调用控制，<strong class="text-yellow-400">SSRF利用</strong></td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-cyan-400">__callStatic()</td>
+              <td class="py-3 px-4">调用不可访问的静态方法</td>
+              <td class="py-3 px-4">静态方法调用控制</td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-pink-400">__invoke()</td>
+              <td class="py-3 px-4">将对象当作方法调用</td>
+              <td class="py-3 px-4">可调用对象</td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-cyan-400">__sleep()</td>
+              <td class="py-3 px-4">执行serialize()</td>
+              <td class="py-3 px-4">定制序列化属性</td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-orange-400">__wakeup()</td>
+              <td class="py-3 px-4">执行unserialize()</td>
+              <td class="py-3 px-4">定制反序列化，<strong class="text-yellow-400">绕过常在此</strong></td>
+            </tr>
+            <tr class="border-b border-gray-700/50">
+              <td class="py-3 px-4 text-yellow-400">__clone()</td>
+              <td class="py-3 px-4">对象被clone()</td>
+              <td class="py-3 px-4">定制复制逻辑</td>
+            </tr>
+            <tr>
+              <td class="py-3 px-4 text-gray-400">__debugInfo()</td>
+              <td class="py-3 px-4">var_dump()/print_r()</td>
+              <td class="py-3 px-4">定制调试输出</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Navigation -->
+    <div class="flex justify-between items-center mt-12 pt-8 border-t border-gray-800">
+      <a href="php-unserialize-basics.html" class="text-gray-400 hover:text-white flex items-center gap-2">
+        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+        <span>上一节：序列化基础</span>
+      </a>
+      <a href="pop-chain.html" class="text-blue-400 hover:text-blue-300 flex items-center gap-2">
+        <span>下一节：POP链构造</span>
+        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+      </a>
+    </div>
+
+  </main>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
