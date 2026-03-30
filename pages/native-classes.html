@@ -100,11 +100,11 @@
             <div class="code-block text-sm">
 <pre><code><span class="text gray-500"><?php</span>
 <span class="text comment">// 创建Error对象，设置message</span>
-$<span class="text variable">e</span> = <span class="text keyword">new</span> <span class="text class-name">Error</span>(<span class="text string">"<script>alert(1)</script>"</span>);
+$<span class="text variable">e</span> = <span class="text keyword">new</span> <span class="text class-name">Error</span>(<span class="text string">"&lt;script&gt;alert(1)&lt;/script&gt;"</span>);
 
 <span class="text comment">// 当echo或字符串拼接时会触发__toString</span>
 <span class="text function">echo</span> <span class="text variable">$e</span>;
-<span class="text comment">// 输出: <script>alert(1)</script></span>
+<span class="text comment">// 输出: &lt;script&gt;alert(1)&lt;/script&gt;</span>
 
 <span class="text comment">// 字符串拼接也会触发</span>
 <span class="text variable">$str</span> = <span class="text string">"Error: "</span> . <span class="text variable">$e</span>;
@@ -121,7 +121,7 @@ $<span class="text variable">e</span> = <span class="text keyword">new</span> <s
 
 <span class="text comment">// 构造XSS payload</span>
 $<span class="text variable">payload</span> = <span class="text function">serialize</span>(
-    <span class="text keyword">new</span> <span class="text class-name">Error</span>(<span class="text string">"<script>alert(document.cookie)</script>"</span>)
+    <span class="text keyword">new</span> <span class="text class-name">Error</span>(<span class="text string">"&lt;script&gt;alert(document.cookie)&lt;/script&gt;"</span>)
 );
 
 <span class="text comment">// POST提交后，如果输出点有echo</span>
@@ -140,7 +140,7 @@ $<span class="text variable">payload</span> = <span class="text function">serial
         <div class="code-block text-sm">
 <pre><code><span class="text gray-500"><?php</span>
 <span class="text comment">// Exception 同样有 __toString()</span>
-$<span class="text variable">e</span> = <span class="text keyword">new</span> <span class="text class-name">Exception</span>(<span class="text string">"<img src=x onerror=alert(1)>"</span>);
+$<span class="text variable">e</span> = <span class="text keyword">new</span> <span class="text class-name">Exception</span>(<span class="text string">"&lt;img src=x onerror=alert(1)&gt;"</span>);
 <span class="text function">echo</span> <span class="text variable">$e</span>;
 <span class="text comment">// XSS payload 会被执行</span>
 </code></pre>
